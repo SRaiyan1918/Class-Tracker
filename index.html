@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ===================== PRIMARY SEO ===================== -->
+    <title>ClassTracker – Track Classes, Tests & Study Progress</title>
+    <meta name="description" content="ClassTracker helps JEE/NEET students track daily classes, test scores, DPP, PYQs and study progress. Stay consistent, analyse performance and ace your exams." />
+    <meta name="keywords" content="class tracker, JEE study tracker, NEET class tracker, test score tracker, DPP tracker, study progress app, online class tracker" />
+    <meta name="author" content="ClassTracker" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://yoursite.com/" />
+
+    <!-- ===================== PWA / APP ===================== -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#3b82f6" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ClassTracker" />
+    <meta name="application-name" content="ClassTracker" />
+
+    <!-- ===================== ICONS ===================== -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/logo-192.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/logo-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/logo-180.png" />
+    <link rel="shortcut icon" href="/logo-192.png" />
+
+    <!-- ===================== OPEN GRAPH (WhatsApp, Facebook) ===================== -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ClassTracker" />
+    <meta property="og:title" content="ClassTracker – Track Classes, Tests & Study Progress" />
+    <meta property="og:description" content="Track daily classes, test scores, DPP, PYQs and study analytics. Built for serious JEE/NEET aspirants." />
+    <meta property="og:image" content="https://yoursite.com/logo-512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:url" content="https://yoursite.com/" />
+    <meta property="og:locale" content="en_IN" />
+
+    <!-- ===================== TWITTER CARD ===================== -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="ClassTracker – Track Classes, Tests & Study Progress" />
+    <meta name="twitter:description" content="Track daily classes, test scores, DPP, PYQs and study analytics." />
+    <meta name="twitter:image" content="https://yoursite.com/logo-512.png" />
+
+    <!-- ===================== STRUCTURED DATA (Google) ===================== -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "ClassTracker",
+      "url": "https://yoursite.com/",
+      "description": "Track daily classes, test scores, DPP, PYQs and monthly study analytics for JEE/NEET preparation.",
+      "applicationCategory": "EducationApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "INR"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "ClassTracker"
+      }
+    }
+    </script>
+
+    <!-- ===================== FONTS ===================== -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+    <!-- ===================== THEME INIT (prevents flash) ===================== -->
+    <script>
+      (function() {
+        var t = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      })();
+    </script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
