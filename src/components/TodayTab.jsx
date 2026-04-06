@@ -33,7 +33,7 @@ const STUDY_ITEMS = [
   { key: 'formula', icon: '📐', label: 'Formula'  },
 ];
 
-export default function TodayTab({ classes, onRefresh, onNotify }) {
+export default function TodayTab({ classes, onRefresh, onNotify, user }) {
   const [showForm, setShowForm]   = useState(false);
   const [form, setForm]           = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
@@ -93,6 +93,7 @@ export default function TodayTab({ classes, onRefresh, onNotify }) {
       } else {
         await addDoc(collection(db, 'classes'), {
           ...buildData(),
+          uid:       user.uid,
           date:      today,
           timestamp: new Date(),
         });

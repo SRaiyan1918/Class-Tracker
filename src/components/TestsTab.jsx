@@ -42,7 +42,7 @@ function hasPaper(testType) {
 // Group order for rendering
 const DISPLAY_GROUPS = ['Mains', 'Advance', 'AITs_M', 'AITs_A'];
 
-export default function TestsTab({ tests, onRefresh, onNotify }) {
+export default function TestsTab({ tests, onRefresh, onNotify, user }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm]         = useState(EMPTY_FORM);
 
@@ -77,7 +77,10 @@ export default function TestsTab({ tests, onRefresh, onNotify }) {
       timestamp:    new Date(),
     };
     try {
-      await addDoc(collection(db, 'tests'), data);
+      await addDoc(collection(db, 'tests'), {
+        ...data,
+        uid: user.uid,
+      });
       setForm(EMPTY_FORM);
       setShowForm(false);
       onRefresh();
