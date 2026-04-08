@@ -38,9 +38,11 @@ export default function TodayTab({ classes, onRefresh, onNotify, user }) {
   const [form, setForm]           = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('en-CA'); // local date YYYY-MM-DD
+  const [selectedDate, setSelectedDate] = useState(today);
+
   const todayClasses = classes
-    .filter(c => c.date === today)
+    .filter(c => c.date === selectedDate)
     .sort((a, b) => new Date(b.timestamp?.toDate?.() || b.timestamp) - new Date(a.timestamp?.toDate?.() || a.timestamp));
 
   function handleChange(e) {
@@ -94,7 +96,7 @@ export default function TodayTab({ classes, onRefresh, onNotify, user }) {
         await addDoc(collection(db, 'classes'), {
           ...buildData(),
           uid:       user.uid,
-          date:      today,
+          date:      selectedDate,
           timestamp: new Date(),
         });
         onNotify('Class added successfully!', 'success');
@@ -119,11 +121,28 @@ export default function TodayTab({ classes, onRefresh, onNotify, user }) {
 
   return (
     <section className="tab-content active">
-      <div className="section-header">
-        <h2>Today's Classes</h2>
-        <button className="btn-primary" onClick={openAddForm}>
+      <div className="section-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem' }}>
+        <h2>{selectedDate === today ? "Today's Classes" : `Classes — ${selectedDate}`}</h2>
+        <button className="btn-primary" style={{ width: '100%' }} onClick={openAddForm}>
           <span>+</span> Add Class
         </button>
+        <input
+          type="date"
+          value={selectedDate}
+          max={today}
+          onChange={e => setSelectedDate(e.target.value)}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            borderBottom: '1.5px solid var(--border)',
+            borderRadius: 0,
+            padding: '0.25rem 0.1rem',
+            fontSize: '0.95rem',
+            color: 'var(--text-secondary)',
+            outline: 'none',
+            cursor: 'pointer',
+          }}
+        />
       </div>
 
       {showForm && (
@@ -202,7 +221,7 @@ export default function TodayTab({ classes, onRefresh, onNotify, user }) {
       <div className="classes-container">
         {todayClasses.length === 0 ? (
           <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '2rem' }}>
-            No classes today yet. Hit <strong>+ Add Class</strong> to get started!
+            {selectedDate === today ? 'No classes today yet.' : 'No classes on this date.'} Hit <strong>+ Add Class</strong> to log one!
           </p>
         ) : todayClasses.map(cls => (
           <div className="class-card" key={cls.id}>
