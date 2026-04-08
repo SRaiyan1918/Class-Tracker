@@ -86,6 +86,114 @@ function DonutChart({ data }) {
   );
 }
 
+/* ── Tree View Component ── */
+function TreeView({ treeData }) {
+  const [openSubjects, setOpenSubjects] = useState({});
+  const [openChapters, setOpenChapters] = useState({});
+
+  if (!Object.keys(treeData).length)
+    return <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '2rem' }}>No data for this month.</p>;
+
+  const toggleSubject = (subj) => setOpenSubjects(p => ({ ...p, [subj]: !p[subj] }));
+  const toggleChapter = (key)  => setOpenChapters(p => ({ ...p, [key]: !p[key] }));
+
+  return (
+    <div style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+      {Object.entries(treeData).map(([subj, chapters]) => {
+        const subjTotal = Object.values(chapters).reduce((s, topics) =>
+          s + Object.values(topics._count).reduce((a, b) => a + b, 0), 0);
+        const isSubjOpen = openSubjects[subj];
+
+        return (
+          <div key={subj} style={{ marginBottom: '0.4rem' }}>
+            {/* Subject row */}
+            <div
+              onClick={() => toggleSubject(subj)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.4rem',
+                cursor: 'pointer', padding: '0.45rem 0.6rem',
+                borderRadius: '8px', fontWeight: 700,
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border)',
+                userSelect: 'none',
+              }}
+            >
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', width: '12px' }}>
+                {isSubjOpen ? '▼' : '▶'}
+              </span>
+              <span>📚</span>
+              <span style={{ color: 'var(--text)', flex: 1 }}>{subj}</span>
+              <span style={{
+                background: 'var(--primary-color)', color: '#fff',
+                borderRadius: '12px', padding: '0.1rem 0.5rem',
+                fontSize: '0.75rem', fontWeight: 700,
+              }}>{subjTotal}</span>
+            </div>
+
+            {/* Chapters */}
+            {isSubjOpen && Object.entries(chapters).map(([chap, topics]) => {
+              const chapTotal = Object.values(topics._count).reduce((a, b) => a + b, 0);
+              const chapKey = `${subj}__${chap}`;
+              const isChapOpen = openChapters[chapKey];
+
+              return (
+                <div key={chap} style={{ marginLeft: '1.2rem', marginTop: '0.3rem' }}>
+                  {/* Chapter row */}
+                  <div
+                    onClick={() => toggleChapter(chapKey)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.4rem',
+                      cursor: 'pointer', padding: '0.35rem 0.6rem',
+                      borderRadius: '6px', fontWeight: 600,
+                      background: 'var(--bg)',
+                      border: '1px solid var(--border)',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', width: '12px' }}>
+                      {isChapOpen ? '▼' : '▶'}
+                    </span>
+                    <span>{isChapOpen ? '📂' : '📁'}</span>
+                    <span style={{ color: 'var(--text)', flex: 1 }}>{chap}</span>
+                    <span style={{
+                      color: 'var(--primary-color)', fontWeight: 700, fontSize: '0.8rem'
+                    }}>{chapTotal}</span>
+                  </div>
+
+                  {/* Topics — old to new, hide ×1 */}
+                  {isChapOpen && topics._order.map((topic) => {
+                    const count = topics._count[topic];
+                    return (
+                      <div
+                        key={topic}
+                        style={{
+                          marginLeft: '1.4rem', marginTop: '0.25rem',
+                          display: 'flex', alignItems: 'center', gap: '0.4rem',
+                          padding: '0.3rem 0.6rem',
+                          borderRadius: '6px',
+                          borderLeft: '2px solid var(--border)',
+                          color: 'var(--text-secondary)',
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        <span>📝</span>
+                        <span style={{ flex: 1 }}>{topic}</span>
+                        {count > 1 && (
+                          <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>×{count}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ════════════════════════════════════════
    MAIN COMPONENT
    ════════════════════════════════════════ */
@@ -155,6 +263,25 @@ export default function AnalyticsTab({ classes, tests }) {
     });
     return Object.entries(map).map(([label, value]) => ({ label, value }))
       .sort((a, b) => b.value - a.value);
+  }, [monthClasses]);
+
+  /* tree data: subject → chapter → topics (old to new order) */
+  const treeData = useMemo(() => {
+    const tree = {};
+    // monthClasses sorted by date asc (old first)
+    const sorted = [...monthClasses].sort((a, b) => new Date(a.date) - new Date(b.date));
+    sorted.forEach(c => {
+      const subj = c.subject || 'Unknown';
+      const chap = c.chapter || '(No Chapter)';
+      const topic = c.topic || '(No Topic)';
+      if (!tree[subj]) tree[subj] = {};
+      if (!tree[subj][chap]) tree[subj][chap] = { _order: [], _count: {} };
+      if (!tree[subj][chap]._count[topic]) {
+        tree[subj][chap]._order.push(topic); // first time — push to preserve order
+      }
+      tree[subj][chap]._count[topic] = (tree[subj][chap]._count[topic] || 0) + 1;
+    });
+    return tree;
   }, [monthClasses]);
 
   /* ── BEAUTIFUL PDF EXPORT ── */
@@ -418,11 +545,11 @@ export default function AnalyticsTab({ classes, tests }) {
         </div>
       </div>
 
-      {/* Chapter breakdown */}
-      {chapterData.length > 0 && (
+      {/* Chapter Tree */}
+      {Object.keys(treeData).length > 0 && (
         <div className="chart-box" style={{ marginTop:'1.5rem' }}>
-          <h3>📂 Chapter Distribution</h3>
-          <BarChart data={chapterData.map(d => ({ label: d.label.length > 14 ? d.label.slice(0,14)+'…' : d.label, value: d.value }))} color="#8b5cf6" />
+          <h3>📁 Subject → Chapter → Topic</h3>
+          <TreeView treeData={treeData} />
         </div>
       )}
     </section>
