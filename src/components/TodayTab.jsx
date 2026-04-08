@@ -5,8 +5,8 @@ import { db } from '../firebase';
 const EMPTY_FORM = {
   subject: '', teacher: '', chapter: '', topic: '',
   attendance: 'Live',
-  theory: false, dpp: false, pyqs: false, formula: false,
-  mistakes: '', improvements: '', notes: '',
+  theory: false, dpp: false, notes: false, hw: false,
+  mistakes: '', improvements: '', remarks: '',
 };
 
 function classToForm(cls) {
@@ -18,19 +18,19 @@ function classToForm(cls) {
     attendance:   cls.attendance   || 'Live',
     theory:       cls.theory       === 'Yes',
     dpp:          cls.dpp          === 'Yes',
-    pyqs:         cls.pyqs         === 'Yes',
-    formula:      cls.formula      === 'Yes',
+    notes:        cls.notes        === 'Yes',
+    hw:           cls.hw           === 'Yes',
     mistakes:     cls.mistakes     || '',
     improvements: cls.improvements || '',
-    notes:        cls.notes        || '',
+    remarks:      cls.remarks      || '',
   };
 }
 
 const STUDY_ITEMS = [
-  { key: 'theory',  icon: '📚', label: 'Theory'  },
-  { key: 'dpp',     icon: '📋', label: 'DPP'     },
-  { key: 'pyqs',    icon: '❓', label: 'PYQs'    },
-  { key: 'formula', icon: '📐', label: 'Formula'  },
+  { key: 'theory', icon: '📚', label: 'Theory' },
+  { key: 'dpp',    icon: '📋', label: 'DPP'    },
+  { key: 'notes',  icon: '📝', label: 'Notes'  },
+  { key: 'hw',     icon: '✏️', label: 'HW'     },
 ];
 
 export default function TodayTab({ classes, onRefresh, onNotify, user }) {
@@ -74,13 +74,13 @@ export default function TodayTab({ classes, onRefresh, onNotify, user }) {
       chapter:      form.chapter,
       topic:        form.topic,
       attendance:   form.attendance,
-      theory:       form.theory  ? 'Yes' : 'No',
-      dpp:          form.dpp     ? 'Yes' : 'No',
-      pyqs:         form.pyqs    ? 'Yes' : 'No',
-      formula:      form.formula ? 'Yes' : 'No',
+      theory:       form.theory ? 'Yes' : 'No',
+      dpp:          form.dpp    ? 'Yes' : 'No',
+      notes:        form.notes  ? 'Yes' : 'No',
+      hw:           form.hw     ? 'Yes' : 'No',
       mistakes:     form.mistakes,
       improvements: form.improvements,
-      notes:        form.notes,
+      remarks:      form.remarks,
     };
   }
 
@@ -185,8 +185,8 @@ export default function TodayTab({ classes, onRefresh, onNotify, user }) {
             </div>
 
             <div className="form-group full-width">
-              <label htmlFor="notes">📌 Notes</label>
-              <textarea id="notes" rows={2} value={form.notes} onChange={handleChange} placeholder="Additional notes..." />
+              <label htmlFor="remarks">📌 Remarks</label>
+              <textarea id="remarks" rows={2} value={form.remarks} onChange={handleChange} placeholder="Additional remarks..." />
             </div>
           </div>
 
@@ -235,11 +235,11 @@ export default function TodayTab({ classes, onRefresh, onNotify, user }) {
               ))}
             </div>
 
-            {(cls.mistakes || cls.improvements || cls.notes) && (
+            {(cls.mistakes || cls.improvements || cls.remarks) && (
               <div className="class-notes">
                 {cls.mistakes     && <div className="note-item"><span className="note-label">⚠️ Mistakes:</span> {cls.mistakes}</div>}
                 {cls.improvements && <div className="note-item"><span className="note-label">💡 Improvements:</span> {cls.improvements}</div>}
-                {cls.notes        && <div className="note-item"><span className="note-label">📌 Notes:</span> {cls.notes}</div>}
+                {cls.remarks      && <div className="note-item"><span className="note-label">📌 Remarks:</span> {cls.remarks}</div>}
               </div>
             )}
           </div>
