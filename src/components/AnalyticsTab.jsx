@@ -306,8 +306,8 @@ export default function AnalyticsTab({ classes, tests }) {
         <td>${c.attendance || ''}</td>
         <td style="text-align:center">${c.theory  === 'Yes' ? '✅' : '❌'}</td>
         <td style="text-align:center">${c.dpp     === 'Yes' ? '✅' : '❌'}</td>
-        <td style="text-align:center">${c.pyqs    === 'Yes' ? '✅' : '❌'}</td>
-        <td style="text-align:center">${c.formula === 'Yes' ? '✅' : '❌'}</td>
+        <td style="text-align:center">${c.notes === 'Yes' ? '✅' : '❌'}</td>
+        <td style="text-align:center">${c.hw    === 'Yes' ? '✅' : '❌'}</td>
       </tr>`).join('');
 
     const testRows = monthTests.map(t => `
@@ -464,7 +464,7 @@ export default function AnalyticsTab({ classes, tests }) {
     ${monthClasses.length ? `
     <table>
       <thead>
-        <tr><th>Date</th><th>Subject</th><th>Teacher</th><th>Chapter</th><th>Topic</th><th>Mode</th><th>Theory</th><th>DPP</th><th>PYQs</th><th>Formula</th></tr>
+        <tr><th>Date</th><th>Subject</th><th>Teacher</th><th>Chapter</th><th>Topic</th><th>Mode</th><th>Theory</th><th>DPP</th><th>Notes</th><th>HW</th></tr>
       </thead>
       <tbody>${classRows}</tbody>
     </table>` : '<p style="color:#94a3b8;text-align:center;padding:1rem">No classes this month.</p>'}
