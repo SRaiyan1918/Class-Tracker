@@ -296,7 +296,7 @@ export default function AnalyticsTab({ classes, tests }) {
       `<tr><td>${c.label}</td><td style="text-align:center;font-weight:700">${c.value}</td></tr>`
     ).join('');
 
-    const classRows = monthClasses.map(c => `
+    const classRows = [...monthClasses].sort((a,b) => new Date(a.date) - new Date(b.date)).map(c => `
       <tr>
         <td>${c.date || ''}</td>
         <td>${c.subject || ''}</td>

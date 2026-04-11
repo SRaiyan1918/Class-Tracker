@@ -8,6 +8,7 @@ import TabNav       from './components/TabNav';
 import TodayTab     from './components/TodayTab';
 import TestsTab     from './components/TestsTab';
 import AnalyticsTab from './components/AnalyticsTab';
+import WeeklyPlan   from './components/WeeklyPlan';
 import LoginPage    from './components/LoginPage';
 
 export default function App() {
@@ -91,6 +92,9 @@ export default function App() {
         )}
         {activeTab === 'tests' && (
           <TestsTab tests={tests} onRefresh={loadData} onNotify={showNotification} user={user} />
+        )}
+        {activeTab === 'plan' && (
+          <WeeklyPlan user={user} onNotify={showNotification} />
         )}
         {activeTab === 'analytics' && (
           <AnalyticsTab classes={classes} tests={tests} />

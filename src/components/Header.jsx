@@ -20,7 +20,12 @@ export default function Header({ theme, onToggleTheme, user }) {
         {/* Logo */}
         <div className="logo-section">
           <div className="logo-icon">📚</div>
-          <h1 className="app-title">ClassTracker</h1>
+          <div>
+            <h1 className="app-title">ClassTracker</h1>
+            <p style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', margin: 0, letterSpacing: '0.02em' }}>
+              by Md Shagaf Raiyan Rashid
+            </p>
+          </div>
         </div>
 
         {/* Right side controls */}

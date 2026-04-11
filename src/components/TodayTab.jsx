@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { collection, addDoc, deleteDoc, doc, updateDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const EMPTY_FORM = {
@@ -37,9 +37,37 @@ export default function TodayTab({ classes, onRefresh, onNotify, user }) {
   const [showForm, setShowForm]   = useState(false);
   const [form, setForm]           = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
+  const [plannedClasses, setPlannedClasses] = useState([]);
 
+  // today and selectedDate MUST be defined before use
   const today = new Date().toLocaleDateString('en-CA'); // local date YYYY-MM-DD
   const [selectedDate, setSelectedDate] = useState(today);
+
+  // Get selected day name
+  const todayDayName = today === selectedDate
+    ? ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][new Date().getDay()]
+    : ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][new Date(selectedDate + 'T12:00:00').getDay()];
+
+  // Load this week's plan
+  useEffect(() => {
+    async function loadPlan() {
+      if (!user) return;
+      const d = new Date(selectedDate + 'T12:00:00');
+      d.setDate(d.getDate() - d.getDay());
+      const weekStart = d.toLocaleDateString('en-CA');
+      try {
+        const snap = await getDocs(query(collection(db, 'weeklyPlans'), where('uid', '==', user.uid), where('weekStart', '==', weekStart)));
+        if (!snap.empty) {
+          const plan = snap.docs[0].data();
+          const dayClasses = plan.days?.[todayDayName] || [];
+          setPlannedClasses(dayClasses);
+        } else {
+          setPlannedClasses([]);
+        }
+      } catch { setPlannedClasses([]); }
+    }
+    loadPlan();
+  }, [selectedDate, user, todayDayName]);
 
   const todayClasses = classes
     .filter(c => c.date === selectedDate)
@@ -217,6 +245,99 @@ export default function TodayTab({ classes, onRefresh, onNotify, user }) {
           </div>
         </form>
       )}
+
+      {/* Daily Goal — only show if plan exists for today */}
+      {selectedDate === today && plannedClasses.length > 0 && (() => {
+        const goalTarget = plannedClasses.length; // auto from plan
+        const done = todayClasses.length;
+        const pct  = Math.min((done / goalTarget) * 100, 100);
+        const achieved = done >= goalTarget;
+        return (
+          <div style={{
+            background: achieved ? 'linear-gradient(135deg,#10b981,#059669)' : 'var(--bg-secondary)',
+            border: `1px solid ${achieved ? '#10b981' : 'var(--border)'}`,
+            borderRadius: '12px', padding: '0.85rem 1rem',
+            marginBottom: '1rem', transition: 'all 0.3s',
+          }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.5rem' }}>
+              <span style={{ fontWeight:700, color: achieved ? '#fff' : 'var(--text)', fontSize:'0.95rem' }}>
+                🎯 Daily Goal
+              </span>
+              <span style={{ fontSize:'0.85rem', color: achieved ? '#fff' : 'var(--text-secondary)' }}>
+                {done}/{goalTarget} classes
+              </span>
+            </div>
+            <div style={{ background: achieved ? 'rgba(255,255,255,0.3)' : 'var(--border)',
+              borderRadius:'999px', height:'8px', overflow:'hidden' }}>
+              <div style={{ width:`${pct}%`, height:'100%', borderRadius:'999px',
+                background: achieved ? '#fff' : 'var(--primary-color)',
+                transition:'width 0.4s ease' }} />
+            </div>
+            {achieved && (
+              <p style={{ margin:'0.4rem 0 0', fontSize:'0.8rem', color:'#fff', textAlign:'center' }}>
+                🎉 Goal achieved! Keep going!
+              </p>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── Planned Cards (from weekly plan) ── */}
+      {plannedClasses.length > 0 && (() => {
+        // Find which planned classes are already completed today
+        const completedTopics = todayClasses.map(c => c.subject + '_' + c.teacher);
+        const pending = plannedClasses.filter(p => !completedTopics.includes(p.subject + '_' + p.teacher));
+
+        if (!pending.length) return null;
+        return (
+          <div style={{ marginBottom: '1rem' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '0.5rem' }}>
+              📋 Planned for today — tap to log
+            </p>
+            {pending.map((cls, i) => (
+              <div
+                key={i}
+                onClick={() => {
+                  setEditingId(null);
+                  setForm({
+                    ...EMPTY_FORM,
+                    subject: cls.subject || '',
+                    teacher: cls.teacher || '',
+                    chapter: cls.chapter || '',
+                  });
+                  setShowForm(true);
+                  setTimeout(() => document.querySelector('.form-container')?.scrollIntoView({ behavior: 'smooth' }), 50);
+                }}
+                style={{
+                  background: 'var(--bg-secondary)',
+                  border: '1.5px dashed var(--border)',
+                  borderRadius: '12px',
+                  padding: '0.75rem 1rem',
+                  marginBottom: '0.5rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  transition: 'border-color 0.2s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary-color)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+              >
+                <span style={{ fontSize: '1.4rem', opacity: 0.5 }}>📖</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.95rem' }}>{cls.subject}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    👨‍🏫 {cls.teacher}{cls.chapter ? ` • 📂 ${cls.chapter}` : ''}
+                  </div>
+                </div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--primary-color)', fontWeight: 600 }}>
+                  Tap to log →
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       <div className="classes-container">
         {todayClasses.length === 0 ? (
