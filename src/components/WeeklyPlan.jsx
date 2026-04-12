@@ -46,6 +46,7 @@ export default function WeeklyPlan({ user, onNotify }) {
   const [draft, setDraft] = useState(() =>
     Object.fromEntries(DAYS.map(d => [d, []]))
   );
+  const [copyModal, setCopyModal] = useState(null); // { fromDay } or null
 
   /* ── Load plans ── */
   async function loadPlans() {
@@ -53,7 +54,8 @@ export default function WeeklyPlan({ user, onNotify }) {
     try {
       const snap = await getDocs(query(collection(db, 'weeklyPlans'), where('uid', '==', user.uid)));
       setPlans(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch {
+    } catch(e) {
+      alert('Load error: ' + e.message);
       onNotify('Failed to load plans', 'error');
     }
     setLoading(false);
@@ -81,8 +83,10 @@ export default function WeeklyPlan({ user, onNotify }) {
     });
   }
 
-  function copyDayTo(fromDay, toDay) {
-    setDraft(prev => ({ ...prev, [toDay]: prev[fromDay].map(c => ({ ...c })) }));
+  function copyOneClass(fromDay, classIdx) {
+    const cls = draft[fromDay][classIdx];
+    setDraft(prev => ({ ...prev, [activeDay]: [...prev[activeDay], { ...cls }] }));
+    setCopyModal(null);
   }
 
   /* ── Save plan ── */
@@ -108,7 +112,8 @@ export default function WeeklyPlan({ user, onNotify }) {
       setShowForm(false);
       setDraft(Object.fromEntries(DAYS.map(d => [d, []])));
       loadPlans();
-    } catch {
+    } catch(e) {
+      alert('Save error: ' + e.message);
       onNotify('Failed to save plan', 'error');
     }
   }
@@ -138,6 +143,7 @@ export default function WeeklyPlan({ user, onNotify }) {
   );
 
   return (
+    <>
     <section className="tab-content active">
 
       {/* Header */}
@@ -201,17 +207,19 @@ export default function WeeklyPlan({ user, onNotify }) {
           <div style={{ marginBottom: '0.75rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
               <strong style={{ color: 'var(--text)' }}>📆 {DAY_LABELS[activeDay]}</strong>
-              {/* Copy from another day */}
-              <select
-                onChange={e => { if (e.target.value) { copyDayTo(e.target.value, activeDay); e.target.value = ''; } }}
-                style={{ fontSize: '0.8rem', padding: '0.2rem 0.4rem', borderRadius: '6px',
-                  border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-secondary)' }}
-              >
-                <option value="">Copy from...</option>
-                {DAYS.filter(d => d !== activeDay && draft[d].length > 0).map(d => (
-                  <option key={d} value={d}>{DAY_LABELS[d]}</option>
-                ))}
-              </select>
+              {/* Copy from another day — opens modal */}
+              {DAYS.some(d => d !== activeDay && draft[d].length > 0) && (
+                <select
+                  onChange={e => { if (e.target.value) { setCopyModal({ fromDay: e.target.value }); e.target.value = ''; } }}
+                  style={{ fontSize: '0.8rem', padding: '0.2rem 0.4rem', borderRadius: '6px',
+                    border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-secondary)' }}
+                >
+                  <option value="">Copy class from...</option>
+                  {DAYS.filter(d => d !== activeDay && draft[d].length > 0).map(d => (
+                    <option key={d} value={d}>{DAY_LABELS[d]}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {draft[activeDay].length === 0 && (
@@ -312,6 +320,53 @@ export default function WeeklyPlan({ user, onNotify }) {
         </div>
       )}
     </section>
+
+    {/* ── Copy Class Modal ── */}
+    {copyModal && (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 999,
+        background: 'rgba(0,0,0,0.45)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      }} onClick={() => setCopyModal(null)}>
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            background: 'var(--bg)', borderRadius: '16px 16px 0 0',
+            padding: '1.25rem', width: '100%', maxWidth: '480px',
+            maxHeight: '60vh', overflowY: 'auto',
+          }}
+        >
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem' }}>
+            <strong style={{ color:'var(--text)' }}>
+              Select class from {DAY_LABELS[copyModal.fromDay]}
+            </strong>
+            <button onClick={() => setCopyModal(null)}
+              style={{ background:'none', border:'none', fontSize:'1.2rem', cursor:'pointer' }}>✕</button>
+          </div>
+          {draft[copyModal.fromDay].map((cls, idx) => (
+            <div
+              key={idx}
+              onClick={() => copyOneClass(copyModal.fromDay, idx)}
+              style={{
+                background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '0.5rem',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem',
+              }}
+            >
+              <span>📖</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.9rem' }}>{cls.subject}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  👨‍🏫 {cls.teacher}{cls.chapter ? ` • 📂 ${cls.chapter}` : ''}
+                </div>
+              </div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--primary-color)', fontWeight: 600 }}>+ Add</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

@@ -552,6 +552,118 @@ export default function AnalyticsTab({ classes, tests }) {
           <TreeView treeData={treeData} />
         </div>
       )}
+
+      {/* Classes Detail Table */}
+      {monthClasses.length > 0 && (
+        <div className="chart-box" style={{ marginTop:'1.5rem' }}>
+          <h3>📋 Classes Detail</h3>
+          <ClassesTable classes={monthClasses} />
+        </div>
+      )}
     </section>
+  );
+}
+
+/* ── Classes Detail Table ── */
+function ClassesTable({ classes }) {
+  const [sortField, setSortField] = useState('date');
+  const [sortAsc, setSortAsc]     = useState(true);
+  const [filterSubj, setFilterSubj] = useState('');
+
+  const subjects = [...new Set(classes.map(c => c.subject).filter(Boolean))].sort();
+
+  const sorted = [...classes]
+    .filter(c => !filterSubj || c.subject === filterSubj)
+    .sort((a, b) => {
+      const va = a[sortField] || '';
+      const vb = b[sortField] || '';
+      return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+
+  function toggleSort(field) {
+    if (sortField === field) setSortAsc(v => !v);
+    else { setSortField(field); setSortAsc(true); }
+  }
+
+  const TH = ({ field, children }) => (
+    <th
+      onClick={() => toggleSort(field)}
+      style={{
+        padding: '0.6rem 0.5rem', textAlign: 'left', fontWeight: 700,
+        fontSize: '0.75rem', cursor: 'pointer', userSelect: 'none',
+        background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: '#fff',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {children} {sortField === field ? (sortAsc ? '↑' : '↓') : ''}
+    </th>
+  );
+
+  const CHECK = ({ val }) => (
+    <span style={{ fontSize: '1rem' }}>{val === 'Yes' ? '✅' : '❌'}</span>
+  );
+
+  return (
+    <div>
+      {/* Filter */}
+      <div style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <select
+          value={filterSubj}
+          onChange={e => setFilterSubj(e.target.value)}
+          style={{ padding: '0.3rem 0.6rem', borderRadius: '8px', border: '1px solid var(--border)',
+            background: 'var(--bg)', color: 'var(--text)', fontSize: '0.85rem' }}
+        >
+          <option value="">All Subjects</option>
+          {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          {sorted.length} class{sorted.length !== 1 ? 'es' : ''}
+        </span>
+      </div>
+
+      {/* Scrollable table */}
+      <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid var(--border)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: '600px' }}>
+          <thead>
+            <tr>
+              <TH field="date">Date</TH>
+              <TH field="subject">Subject</TH>
+              <TH field="teacher">Teacher</TH>
+              <TH field="chapter">Chapter</TH>
+              <TH field="topic">Topic</TH>
+              <TH field="attendance">Mode</TH>
+              <th style={{ padding:'0.6rem 0.4rem', background:'linear-gradient(135deg,#3b82f6,#8b5cf6)', color:'#fff', fontSize:'0.75rem', whiteSpace:'nowrap' }}>Theory</th>
+              <th style={{ padding:'0.6rem 0.4rem', background:'linear-gradient(135deg,#3b82f6,#8b5cf6)', color:'#fff', fontSize:'0.75rem', whiteSpace:'nowrap' }}>DPP</th>
+              <th style={{ padding:'0.6rem 0.4rem', background:'linear-gradient(135deg,#3b82f6,#8b5cf6)', color:'#fff', fontSize:'0.75rem', whiteSpace:'nowrap' }}>Notes</th>
+              <th style={{ padding:'0.6rem 0.4rem', background:'linear-gradient(135deg,#3b82f6,#8b5cf6)', color:'#fff', fontSize:'0.75rem', whiteSpace:'nowrap' }}>HW</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((c, i) => (
+              <tr key={c.id || i} style={{ background: i % 2 === 0 ? 'var(--bg)' : 'var(--bg-secondary)' }}>
+                <td style={{ padding:'0.55rem 0.5rem', whiteSpace:'nowrap', color:'var(--text-secondary)', fontSize:'0.78rem' }}>{c.date}</td>
+                <td style={{ padding:'0.55rem 0.5rem', fontWeight:600, color:'var(--text)', whiteSpace:'nowrap' }}>{c.subject}</td>
+                <td style={{ padding:'0.55rem 0.5rem', color:'var(--text-secondary)', whiteSpace:'nowrap' }}>{c.teacher}</td>
+                <td style={{ padding:'0.55rem 0.5rem', color:'var(--text-secondary)' }}>{c.chapter || '—'}</td>
+                <td style={{ padding:'0.55rem 0.5rem', color:'var(--text)' }}>{c.topic}</td>
+                <td style={{ padding:'0.55rem 0.5rem', whiteSpace:'nowrap' }}>
+                  <span style={{
+                    background: c.attendance === 'Live' ? '#dbeafe' : c.attendance === 'Recorded' ? '#fce7f3' : '#d1fae5',
+                    color: c.attendance === 'Live' ? '#1d4ed8' : c.attendance === 'Recorded' ? '#be185d' : '#065f46',
+                    borderRadius: '6px', padding: '0.15rem 0.4rem', fontSize: '0.75rem', fontWeight: 600,
+                  }}>
+                    {c.attendance === 'Live' ? '📺' : c.attendance === 'Recorded' ? '📹' : '🔄'} {c.attendance}
+                  </span>
+                </td>
+                <td style={{ padding:'0.55rem 0.4rem', textAlign:'center' }}><CHECK val={c.theory} /></td>
+                <td style={{ padding:'0.55rem 0.4rem', textAlign:'center' }}><CHECK val={c.dpp} /></td>
+                <td style={{ padding:'0.55rem 0.4rem', textAlign:'center' }}><CHECK val={c.notes} /></td>
+                <td style={{ padding:'0.55rem 0.4rem', textAlign:'center' }}><CHECK val={c.hw} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
