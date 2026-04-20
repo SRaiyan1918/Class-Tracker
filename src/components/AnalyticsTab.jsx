@@ -284,6 +284,78 @@ export default function AnalyticsTab({ classes, tests }) {
     return tree;
   }, [monthClasses]);
 
+
+  /* ── COMPARISON ANALYSIS DATA ── */
+
+  // 1. Attendance breakdown
+  const attendanceStats = useMemo(() => {
+    const total = monthClasses.length;
+    if (!total) return [];
+    const map = { Live: 0, Recorded: 0, Hybrid: 0 };
+    monthClasses.forEach(c => { if (c.attendance) map[c.attendance] = (map[c.attendance] || 0) + 1; });
+    return Object.entries(map)
+      .filter(([, v]) => v > 0)
+      .map(([label, value]) => ({
+        label, value,
+        pct: Math.round((value / total) * 100),
+        color: label === 'Live' ? '#3b82f6' : label === 'Recorded' ? '#8b5cf6' : '#10b981',
+        icon: label === 'Live' ? '📺' : label === 'Recorded' ? '📹' : '🔄',
+      }));
+  }, [monthClasses]);
+
+  // 2. Study work accuracy
+  const studyWorkStats = useMemo(() => {
+    const total = monthClasses.length;
+    if (!total) return [];
+    const items = [
+      { key: 'theory', label: 'Theory', icon: '📚', color: '#3b82f6', triState: false },
+      { key: 'dpp',    label: 'DPP',    icon: '📋', color: '#8b5cf6', triState: true  },
+      { key: 'notes',  label: 'Notes',  icon: '📝', color: '#10b981', triState: false },
+      { key: 'hw',     label: 'HW',     icon: '✏️', color: '#f59e0b', triState: true  },
+    ];
+    return items.map(({ key, label, icon, color, triState }) => {
+      const yes = monthClasses.filter(c => c[key] === 'Yes').length;
+      const na  = triState ? monthClasses.filter(c => c[key] === 'N/A').length : 0;
+      const applicable = total - na;
+      const pct = applicable > 0 ? Math.round((yes / applicable) * 100) : 0;
+      return { key, label, icon, color, yes, na, no: total - yes - na, pct, applicable, total };
+    });
+  }, [monthClasses]);
+
+  // 3. Per-subject breakdown
+  const subjectWorkStats = useMemo(() => {
+    const map = {};
+    monthClasses.forEach(c => {
+      const s = c.subject || 'Unknown';
+      if (!map[s]) map[s] = { total: 0, dppYes: 0, dppNA: 0, hwYes: 0, hwNA: 0, theory: 0, notes: 0 };
+      map[s].total++;
+      if (c.theory === 'Yes') map[s].theory++;
+      if (c.dpp    === 'Yes') map[s].dppYes++;
+      if (c.dpp    === 'N/A') map[s].dppNA++;
+      if (c.notes  === 'Yes') map[s].notes++;
+      if (c.hw     === 'Yes') map[s].hwYes++;
+      if (c.hw     === 'N/A') map[s].hwNA++;
+    });
+    return Object.entries(map).map(([subject, d]) => {
+      const dppApp = d.total - d.dppNA;
+      const hwApp  = d.total - d.hwNA;
+      return {
+        subject, total: d.total,
+        theoryPct: Math.round((d.theory  / d.total)  * 100),
+        dppPct:    dppApp > 0 ? Math.round((d.dppYes / dppApp) * 100) : null,
+        notesPct:  Math.round((d.notes   / d.total)  * 100),
+        hwPct:     hwApp  > 0 ? Math.round((d.hwYes  / hwApp)  * 100) : null,
+        dppNA: d.dppNA, hwNA: d.hwNA,
+      };
+    }).sort((a, b) => b.total - a.total);
+  }, [monthClasses]);
+
+  // 4. Overall completion score
+  const overallScore = useMemo(() => {
+    if (!studyWorkStats.length) return 0;
+    return Math.round(studyWorkStats.reduce((a, s) => a + s.pct, 0) / studyWorkStats.length);
+  }, [studyWorkStats]);
+
   /* ── BEAUTIFUL PDF EXPORT ── */
   function exportPDF() {
     const monthStr = new Date(selYear, selMonth - 1).toLocaleDateString('en-IN', { year: 'numeric', month: 'long' });
@@ -550,6 +622,196 @@ export default function AnalyticsTab({ classes, tests }) {
         <div className="chart-box" style={{ marginTop:'1.5rem' }}>
           <h3>📁 Subject → Chapter → Topic</h3>
           <TreeView treeData={treeData} />
+        </div>
+      )}
+
+      {/* ════ COMPARISON ANALYSIS SECTION ════ */}
+      {monthClasses.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+
+          {/* ── Overall Score Card ── */}
+          <div style={{
+            background: overallScore >= 80
+              ? 'linear-gradient(135deg,#10b981,#059669)'
+              : overallScore >= 50
+              ? 'linear-gradient(135deg,#f59e0b,#d97706)'
+              : 'linear-gradient(135deg,#ef4444,#dc2626)',
+            borderRadius: '16px', padding: '1.25rem 1.5rem',
+            marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem',
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, opacity: 0.9 }}>
+                📊 Overall Study Completion Score
+              </div>
+              <div style={{ color: '#fff', fontSize: '2rem', fontWeight: 900, lineHeight: 1.2 }}>
+                {overallScore}%
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.78rem', marginTop: '0.2rem' }}>
+                Based on {monthClasses.length} classes this month
+              </div>
+            </div>
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '2rem', flexShrink: 0,
+            }}>
+              {overallScore >= 80 ? '🏆' : overallScore >= 50 ? '📈' : '💪'}
+            </div>
+          </div>
+
+          {/* ── Attendance Mode Comparison ── */}
+          <div className="chart-box" style={{ marginBottom: '1.25rem' }}>
+            <h3>📺 Attendance Mode Comparison</h3>
+            {attendanceStats.length === 0
+              ? <p style={{ color:'var(--text-secondary)', textAlign:'center', padding:'1rem' }}>No data</p>
+              : (
+              <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem', marginTop:'0.75rem' }}>
+                {attendanceStats.map(s => (
+                  <div key={s.label}>
+                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.3rem' }}>
+                      <span style={{ fontWeight:600, fontSize:'0.9rem' }}>{s.icon} {s.label}</span>
+                      <span style={{ fontWeight:700, color: s.color }}>
+                        {s.value} classes &nbsp;·&nbsp; {s.pct}%
+                      </span>
+                    </div>
+                    <div style={{ background:'var(--border)', borderRadius:'999px', height:'10px', overflow:'hidden' }}>
+                      <div style={{
+                        width: `${s.pct}%`, height:'100%', borderRadius:'999px',
+                        background: s.color, transition:'width 0.5s ease',
+                      }} />
+                    </div>
+                  </div>
+                ))}
+                {/* mini bar chart visual */}
+                <div style={{ display:'flex', gap:'0.5rem', marginTop:'0.75rem', height:'120px', alignItems:'flex-end' }}>
+                  {attendanceStats.map(s => {
+                    const maxPct = Math.max(...attendanceStats.map(x => x.pct));
+                    return (
+                      <div key={s.label} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'4px', height:'100%', justifyContent:'flex-end' }}>
+                        <span style={{ fontSize:'0.75rem', fontWeight:700, color: s.color }}>{s.pct}%</span>
+                        <div style={{
+                          width:'100%',
+                          height:`${(s.pct/maxPct)*90}px`,
+                          background:`linear-gradient(180deg,${s.color},${s.color}99)`,
+                          borderRadius:'8px 8px 0 0', minHeight: s.pct ? '6px':'0',
+                          transition:'height 0.5s ease',
+                        }}/>
+                        <span style={{ fontSize:'0.72rem', color:'var(--text-secondary)', fontWeight:600 }}>{s.icon} {s.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Study Work Accuracy ── */}
+          <div className="chart-box" style={{ marginBottom: '1.25rem' }}>
+            <h3>✅ Study Work Accuracy</h3>
+            <p style={{ fontSize:'0.78rem', color:'var(--text-secondary)', marginBottom:'0.75rem' }}>
+              N/A classes (teacher did not give) are excluded from accuracy calculation
+            </p>
+            {studyWorkStats.length === 0
+              ? <p style={{ color:'var(--text-secondary)', textAlign:'center', padding:'1rem' }}>No data</p>
+              : (
+              <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
+                {studyWorkStats.map(s => (
+                  <div key={s.key}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.3rem' }}>
+                      <span style={{ fontWeight:700, fontSize:'0.92rem' }}>{s.icon} {s.label}</span>
+                      <div style={{ display:'flex', gap:'0.6rem', alignItems:'center', fontSize:'0.8rem' }}>
+                        <span style={{ color:'#10b981', fontWeight:600 }}>✅ {s.yes}</span>
+                        <span style={{ color:'#ef4444', fontWeight:600 }}>❌ {s.no}</span>
+                        {s.na > 0 && <span style={{ color:'#f59e0b', fontWeight:600 }}>⚠️ {s.na} N/A</span>}
+                        <span style={{
+                          background: s.pct>=80 ? '#10b981' : s.pct>=50 ? '#f59e0b' : '#ef4444',
+                          color:'#fff', borderRadius:'20px', padding:'0.1rem 0.55rem',
+                          fontWeight:800, fontSize:'0.85rem',
+                        }}>{s.pct}%</span>
+                      </div>
+                    </div>
+                    <div style={{ background:'var(--border)', borderRadius:'999px', height:'12px', overflow:'hidden', position:'relative' }}>
+                      <div style={{
+                        width:`${s.pct}%`, height:'100%', borderRadius:'999px',
+                        background:`linear-gradient(90deg,${s.color},${s.color}cc)`,
+                        transition:'width 0.5s ease',
+                      }}/>
+                    </div>
+                    <div style={{ fontSize:'0.72rem', color:'var(--text-secondary)', marginTop:'0.2rem' }}>
+                      {s.applicable} applicable classes {s.na > 0 ? `(${s.na} N/A excluded)` : ''}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Bar chart comparing all 4 */}
+                <div style={{ display:'flex', gap:'0.5rem', marginTop:'0.5rem', height:'140px', alignItems:'flex-end', padding:'0 4px' }}>
+                  {studyWorkStats.map(s => (
+                    <div key={s.key} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'4px', height:'100%', justifyContent:'flex-end' }}>
+                      <span style={{ fontSize:'0.72rem', fontWeight:800, color: s.color }}>{s.pct}%</span>
+                      <div style={{
+                        width:'100%', height:`${(s.pct/100)*100}px`,
+                        background:`linear-gradient(180deg,${s.color},${s.color}99)`,
+                        borderRadius:'8px 8px 0 0', minHeight: s.pct ? '4px':'0',
+                        transition:'height 0.5s ease',
+                      }}/>
+                      <span style={{ fontSize:'0.7rem', color:'var(--text-secondary)', fontWeight:600 }}>{s.icon}</span>
+                      <span style={{ fontSize:'0.68rem', color:'var(--text-secondary)' }}>{s.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Per-Subject Breakdown ── */}
+          {subjectWorkStats.length > 0 && (
+            <div className="chart-box" style={{ marginBottom: '1.25rem' }}>
+              <h3>📚 Per-Subject Accuracy Breakdown</h3>
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'0.82rem', minWidth:'480px', marginTop:'0.75rem' }}>
+                  <thead>
+                    <tr style={{ background:'linear-gradient(135deg,#3b82f6,#8b5cf6)', color:'#fff' }}>
+                      <th style={{ padding:'0.6rem 0.7rem', textAlign:'left', fontWeight:700, borderRadius:'8px 0 0 0' }}>Subject</th>
+                      <th style={{ padding:'0.6rem 0.5rem', textAlign:'center', fontWeight:700 }}>Classes</th>
+                      <th style={{ padding:'0.6rem 0.5rem', textAlign:'center', fontWeight:700 }}>📚 Theory</th>
+                      <th style={{ padding:'0.6rem 0.5rem', textAlign:'center', fontWeight:700 }}>📋 DPP</th>
+                      <th style={{ padding:'0.6rem 0.5rem', textAlign:'center', fontWeight:700 }}>📝 Notes</th>
+                      <th style={{ padding:'0.6rem 0.5rem', textAlign:'center', fontWeight:700, borderRadius:'0 8px 0 0' }}>✏️ HW</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subjectWorkStats.map((s, i) => {
+                      const pctCell = (pct, na) => {
+                        if (pct === null) return <td style={{ padding:'0.5rem', textAlign:'center', color:'var(--text-secondary)', fontSize:'0.75rem' }}>—</td>;
+                        const bg = pct>=80 ? '#10b981' : pct>=50 ? '#f59e0b' : '#ef4444';
+                        return (
+                          <td style={{ padding:'0.5rem 0.4rem', textAlign:'center' }}>
+                            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'2px' }}>
+                              <span style={{ background:bg, color:'#fff', borderRadius:'12px', padding:'0.1rem 0.45rem', fontWeight:700, fontSize:'0.8rem' }}>
+                                {pct}%
+                              </span>
+                              {na > 0 && <span style={{ fontSize:'0.65rem', color:'#f59e0b' }}>⚠️{na} N/A</span>}
+                            </div>
+                          </td>
+                        );
+                      };
+                      return (
+                        <tr key={s.subject} style={{ background: i%2===0 ? 'var(--bg)' : 'var(--bg-secondary)' }}>
+                          <td style={{ padding:'0.55rem 0.7rem', fontWeight:700, color:'var(--text)' }}>{s.subject}</td>
+                          <td style={{ padding:'0.55rem 0.5rem', textAlign:'center', fontWeight:600, color:'var(--primary-color)' }}>{s.total}</td>
+                          {pctCell(s.theoryPct, 0)}
+                          {pctCell(s.dppPct, s.dppNA)}
+                          {pctCell(s.notesPct, 0)}
+                          {pctCell(s.hwPct, s.hwNA)}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
