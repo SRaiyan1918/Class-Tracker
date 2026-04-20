@@ -831,6 +831,8 @@ function ClassesTable({ classes }) {
   const [sortField, setSortField] = useState('date');
   const [sortAsc, setSortAsc]     = useState(true);
   const [filterSubj, setFilterSubj] = useState('');
+  const [editingClass, setEditingClass] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const subjects = [...new Set(classes.map(c => c.subject).filter(Boolean))].sort();
 
@@ -845,6 +847,41 @@ function ClassesTable({ classes }) {
   function toggleSort(field) {
     if (sortField === field) setSortAsc(v => !v);
     else { setSortField(field); setSortAsc(true); }
+  }
+
+  function openEdit(c) {
+    setEditingClass({
+      id:    c.id,
+      subj:  c.subject,
+      date:  c.date,
+      notes: c.notes || 'No',
+      dpp:   c.dpp   || 'No',
+      hw:    c.hw    || 'No',
+    });
+  }
+
+  async function saveEdit() {
+    if (!editingClass?.id) return;
+    setSaving(true);
+    try {
+      const { updateDoc, doc } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      await updateDoc(doc(db, 'classes', editingClass.id), {
+        notes: editingClass.notes,
+        dpp:   editingClass.dpp,
+        hw:    editingClass.hw,
+      });
+      const row = classes.find(c => c.id === editingClass.id);
+      if (row) {
+        row.notes = editingClass.notes;
+        row.dpp   = editingClass.dpp;
+        row.hw    = editingClass.hw;
+      }
+      setEditingClass(null);
+    } catch (e) {
+      alert('Save failed: ' + e.message);
+    }
+    setSaving(false);
   }
 
   const TH = ({ field, children }) => (
@@ -862,14 +899,93 @@ function ClassesTable({ classes }) {
   );
 
   const CHECK = ({ val }) => (
-    <span style={{ fontSize: '1rem' }}>
-      {val === 'Yes' ? '✅' : val === 'N/A' ? <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 700 }}>⚠️ N/A</span> : '❌'}
+    <span style={{ fontSize: '0.95rem' }}>
+      {val === 'Yes' ? '✅' : val === 'N/A'
+        ? <span style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 700 }}>⚠️ N/A</span>
+        : '❌'}
     </span>
   );
 
+  const TriToggle = ({ field, label, triState }) => {
+    const val = editingClass[field];
+    const options = triState
+      ? [{ v:'Yes', e:'✅', t:'Yes', c:'#10b981' }, { v:'No', e:'❌', t:'No', c:'#ef4444' }, { v:'N/A', e:'⚠️', t:'N/A', c:'#f59e0b' }]
+      : [{ v:'Yes', e:'✅', t:'Yes', c:'#10b981' }, { v:'No', e:'❌', t:'No', c:'#ef4444' }];
+    return (
+      <div style={{ marginBottom:'0.9rem' }}>
+        <div style={{ fontSize:'0.82rem', fontWeight:700, color:'var(--text)', marginBottom:'0.4rem' }}>{label}</div>
+        <div style={{ display:'flex', gap:'0.4rem' }}>
+          {options.map(({ v, e, t, c }) => (
+            <button key={v} type="button"
+              onClick={() => setEditingClass(prev => ({ ...prev, [field]: v }))}
+              style={{
+                flex:1, padding:'0.45rem 0.2rem', fontSize:'0.78rem', fontWeight:700,
+                borderRadius:'10px', cursor:'pointer', transition:'all 0.15s',
+                border: `2px solid ${val === v ? c : 'var(--border)'}`,
+                background: val === v ? (c + '22') : 'transparent',
+                color: val === v ? c : 'var(--text-secondary)',
+              }}
+            >{e} {t}</button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div>
-      {/* Filter */}
+      {/* ── Edit Modal ── */}
+      {editingClass && (
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setEditingClass(null); }}
+          style={{
+            position:'fixed', inset:0, background:'rgba(0,0,0,0.55)',
+            zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center',
+            padding:'1rem',
+          }}
+        >
+          <div style={{
+            background:'var(--bg)', borderRadius:'18px', padding:'1.4rem',
+            width:'100%', maxWidth:'360px',
+            boxShadow:'0 20px 60px rgba(0,0,0,0.3)',
+            border:'1px solid var(--border)',
+          }}>
+            <div style={{ marginBottom:'1.1rem' }}>
+              <div style={{ fontWeight:800, fontSize:'1rem', color:'var(--text)' }}>✏️ Quick Edit</div>
+              <div style={{ fontSize:'0.78rem', color:'var(--text-secondary)', marginTop:'0.25rem' }}>
+                {editingClass.date} &bull; {editingClass.subj}
+              </div>
+            </div>
+
+            <TriToggle field="notes" label="📝 Notes"  triState={false} />
+            <TriToggle field="dpp"   label="📋 DPP"    triState={true}  />
+            <TriToggle field="hw"    label="✏️ HW"     triState={true}  />
+
+            <div style={{ display:'flex', gap:'0.6rem', marginTop:'1.1rem' }}>
+              <button
+                onClick={saveEdit}
+                disabled={saving}
+                style={{
+                  flex:1, padding:'0.65rem', borderRadius:'12px', border:'none',
+                  background:'linear-gradient(135deg,#3b82f6,#8b5cf6)',
+                  color:'#fff', fontWeight:700, fontSize:'0.9rem', cursor:'pointer',
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >{saving ? 'Saving...' : '💾 Save'}</button>
+              <button
+                onClick={() => setEditingClass(null)}
+                style={{
+                  padding:'0.65rem 1rem', borderRadius:'12px',
+                  border:'1px solid var(--border)', background:'transparent',
+                  color:'var(--text)', fontWeight:600, fontSize:'0.9rem', cursor:'pointer',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Filter ── */}
       <div style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <select
           value={filterSubj}
@@ -885,9 +1001,9 @@ function ClassesTable({ classes }) {
         </span>
       </div>
 
-      {/* Scrollable table */}
+      {/* ── Table ── */}
       <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid var(--border)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: '600px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: '650px' }}>
           <thead>
             <tr>
               <TH field="date">Date</TH>
@@ -900,6 +1016,7 @@ function ClassesTable({ classes }) {
               <th style={{ padding:'0.6rem 0.4rem', background:'linear-gradient(135deg,#3b82f6,#8b5cf6)', color:'#fff', fontSize:'0.75rem', whiteSpace:'nowrap' }}>DPP</th>
               <th style={{ padding:'0.6rem 0.4rem', background:'linear-gradient(135deg,#3b82f6,#8b5cf6)', color:'#fff', fontSize:'0.75rem', whiteSpace:'nowrap' }}>Notes</th>
               <th style={{ padding:'0.6rem 0.4rem', background:'linear-gradient(135deg,#3b82f6,#8b5cf6)', color:'#fff', fontSize:'0.75rem', whiteSpace:'nowrap' }}>HW</th>
+              <th style={{ padding:'0.6rem 0.4rem', background:'linear-gradient(135deg,#3b82f6,#8b5cf6)', color:'#fff', fontSize:'0.75rem', whiteSpace:'nowrap' }}>Edit</th>
             </tr>
           </thead>
           <tbody>
@@ -923,6 +1040,19 @@ function ClassesTable({ classes }) {
                 <td style={{ padding:'0.55rem 0.4rem', textAlign:'center' }}><CHECK val={c.dpp} /></td>
                 <td style={{ padding:'0.55rem 0.4rem', textAlign:'center' }}><CHECK val={c.notes} /></td>
                 <td style={{ padding:'0.55rem 0.4rem', textAlign:'center' }}><CHECK val={c.hw} /></td>
+                <td style={{ padding:'0.4rem 0.4rem', textAlign:'center' }}>
+                  <button
+                    onClick={() => openEdit(c)}
+                    title="Edit Notes / DPP / HW"
+                    style={{
+                      background:'linear-gradient(135deg,#3b82f6,#8b5cf6)',
+                      border:'none', borderRadius:'8px',
+                      padding:'0.28rem 0.5rem',
+                      color:'#fff', cursor:'pointer',
+                      fontSize:'0.85rem', lineHeight:1,
+                    }}
+                  >✏️</button>
+                </td>
               </tr>
             ))}
           </tbody>
