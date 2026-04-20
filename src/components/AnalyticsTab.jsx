@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 
 /* ── helpers ── */
 function getStats(tests, type) {
@@ -935,54 +936,63 @@ function ClassesTable({ classes }) {
   return (
     <div>
       {/* ── Edit Modal ── */}
-      {editingClass && (
+      {editingClass && createPortal(
         <div
           onClick={e => { if (e.target === e.currentTarget) setEditingClass(null); }}
           style={{
-            position:'fixed', inset:0, background:'rgba(0,0,0,0.55)',
-            zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center',
-            padding:'1rem',
+            position:'fixed', inset:0,
+            background:'rgba(0,0,0,0.72)',
+            zIndex:99999,
+            display:'flex', alignItems:'center', justifyContent:'center',
+            padding:'1.5rem',
+            backdropFilter:'blur(4px)',
+            WebkitBackdropFilter:'blur(4px)',
           }}
         >
-          <div style={{
-            background:'var(--bg)', borderRadius:'18px', padding:'1.4rem',
-            width:'100%', maxWidth:'360px',
-            boxShadow:'0 20px 60px rgba(0,0,0,0.3)',
-            border:'1px solid var(--border)',
-          }}>
-            <div style={{ marginBottom:'1.1rem' }}>
-              <div style={{ fontWeight:800, fontSize:'1rem', color:'var(--text)' }}>✏️ Quick Edit</div>
-              <div style={{ fontSize:'0.78rem', color:'var(--text-secondary)', marginTop:'0.25rem' }}>
-                {editingClass.date} &bull; {editingClass.subj}
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background:'var(--bg)', borderRadius:'20px', padding:'1.5rem',
+              width:'100%', maxWidth:'340px',
+              boxShadow:'0 24px 80px rgba(0,0,0,0.5)',
+              border:'1px solid var(--border)',
+            }}
+          >
+            <div style={{ marginBottom:'1.2rem', borderBottom:'1px solid var(--border)', paddingBottom:'0.8rem' }}>
+              <div style={{ fontWeight:800, fontSize:'1.05rem', color:'var(--text)' }}>Quick Edit</div>
+              <div style={{ fontSize:'0.8rem', color:'var(--text-secondary)', marginTop:'0.25rem' }}>
+                {editingClass.date} &bull; <strong>{editingClass.subj}</strong>
               </div>
             </div>
 
-            <TriToggle field="notes" label="📝 Notes"  triState={false} />
-            <TriToggle field="dpp"   label="📋 DPP"    triState={true}  />
-            <TriToggle field="hw"    label="✏️ HW"     triState={true}  />
+            <TriToggle field="notes" label="Notes"  triState={false} />
+            <TriToggle field="dpp"   label="DPP"    triState={true}  />
+            <TriToggle field="hw"    label="HW"     triState={true}  />
 
-            <div style={{ display:'flex', gap:'0.6rem', marginTop:'1.1rem' }}>
+            <div style={{ display:'flex', gap:'0.6rem', marginTop:'1.2rem' }}>
               <button
                 onClick={saveEdit}
                 disabled={saving}
                 style={{
-                  flex:1, padding:'0.65rem', borderRadius:'12px', border:'none',
+                  flex:1, padding:'0.7rem', borderRadius:'12px', border:'none',
                   background:'linear-gradient(135deg,#3b82f6,#8b5cf6)',
-                  color:'#fff', fontWeight:700, fontSize:'0.9rem', cursor:'pointer',
+                  color:'#fff', fontWeight:700, fontSize:'0.95rem', cursor:'pointer',
                   opacity: saving ? 0.7 : 1,
+                  boxShadow:'0 4px 15px rgba(59,130,246,0.4)',
                 }}
-              >{saving ? 'Saving...' : '💾 Save'}</button>
+              >{saving ? 'Saving...' : 'Save'}</button>
               <button
                 onClick={() => setEditingClass(null)}
                 style={{
-                  padding:'0.65rem 1rem', borderRadius:'12px',
-                  border:'1px solid var(--border)', background:'transparent',
-                  color:'var(--text)', fontWeight:600, fontSize:'0.9rem', cursor:'pointer',
+                  padding:'0.7rem 1.1rem', borderRadius:'12px',
+                  border:'1px solid var(--border)', background:'var(--bg-secondary)',
+                  color:'var(--text)', fontWeight:600, fontSize:'0.95rem', cursor:'pointer',
                 }}
               >Cancel</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Filter ── */}
