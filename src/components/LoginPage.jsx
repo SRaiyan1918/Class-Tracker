@@ -60,6 +60,29 @@ export default function LoginPage() {
         <p className="login-footer">
           Free forever · No ads · Your data is private
         </p>
+
+        {/* Contact Us */}
+        <p style={{
+          marginTop: '1rem',
+          fontSize: '0.82rem',
+          color: 'var(--text-secondary, #64748b)',
+          textAlign: 'center',
+        }}>
+          📬 Contact Us:{' '}
+          <a
+            href="https://t.me/md_shagaf_raiyan_rashid"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: '#3b82f6',
+              fontWeight: 700,
+              textDecoration: 'none',
+            }}
+          >
+            t.me/md_shagaf_raiyan_rashid
+          </a>
+        </p>
+
       </div>
     </div>
   );
