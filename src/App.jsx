@@ -8,7 +8,7 @@ import TabNav       from './components/TabNav';
 import TodayTab     from './components/TodayTab';
 import TestsTab     from './components/TestsTab';
 import AnalyticsTab from './components/AnalyticsTab';
-import WeeklyPlan   from './components/WeeklyPlan';
+import PracticeTab  from './components/PracticeTab';
 import LoginPage    from './components/LoginPage';
 
 export default function App() {
@@ -16,6 +16,7 @@ export default function App() {
   const [activeTab, setActiveTab]   = useState('today');
   const [classes, setClasses]       = useState([]);
   const [tests, setTests]           = useState([]);
+  const [practices, setPractices]   = useState([]);
   const [notification, setNotification] = useState(null);
 
   // Auth state
@@ -42,12 +43,14 @@ export default function App() {
     if (!user) return;
     try {
       const uid = user.uid;
-      const [classSnap, testSnap] = await Promise.all([
-        getDocs(query(collection(db, 'classes'), where('uid', '==', uid))),
-        getDocs(query(collection(db, 'tests'),   where('uid', '==', uid))),
+      const [classSnap, testSnap, practiceSnap] = await Promise.all([
+        getDocs(query(collection(db, 'classes'),   where('uid', '==', uid))),
+        getDocs(query(collection(db, 'tests'),     where('uid', '==', uid))),
+        getDocs(query(collection(db, 'practices'), where('uid', '==', uid))),
       ]);
       setClasses(classSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       setTests(testSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setPractices(practiceSnap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
       showNotification('Failed to load data', 'error');
     }
@@ -55,7 +58,7 @@ export default function App() {
 
   useEffect(() => {
     if (user) loadData();
-    else { setClasses([]); setTests([]); }
+    else { setClasses([]); setTests([]); setPractices([]); }
   }, [user, loadData]);
 
   function showNotification(message, type) {
@@ -93,8 +96,8 @@ export default function App() {
         {activeTab === 'tests' && (
           <TestsTab tests={tests} onRefresh={loadData} onNotify={showNotification} user={user} />
         )}
-        {activeTab === 'plan' && (
-          <WeeklyPlan user={user} onNotify={showNotification} />
+        {activeTab === 'practice' && (
+          <PracticeTab practices={practices} onRefresh={loadData} onNotify={showNotification} user={user} />
         )}
         {activeTab === 'analytics' && (
           <AnalyticsTab classes={classes} tests={tests} />
