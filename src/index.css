@@ -533,3 +533,166 @@ body {
   transition: var(--transition);
 }
 .user-menu-logout:hover { background: rgba(239,68,68,0.08); }
+/* ========================================
+   PRACTICE TAB
+   ======================================== */
+
+/* Summary grid */
+.practice-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+  animation: slideUp 0.4s ease-out;
+}
+.psum-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+.psum-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.psum-card.green { border-left: 4px solid var(--accent-green); }
+.psum-card.red   { border-left: 4px solid var(--accent-red); }
+.psum-card.orange{ border-left: 4px solid var(--accent-orange); }
+.psum-card.blue  { border-left: 4px solid var(--primary-color); }
+.psum-label { font-size: 0.78rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 0.4rem; }
+.psum-val   { font-size: 1.7rem; font-weight: 800; color: var(--text); }
+
+/* Live preview */
+.practice-live-preview {
+  display: flex; gap: 1.5rem; flex-wrap: wrap;
+  background: var(--surface);
+  border-radius: 10px; padding: 0.75rem 1.2rem;
+  margin-bottom: 1.2rem;
+  font-size: 0.92rem;
+  border: 1px solid var(--border);
+  animation: fadeIn 0.3s ease-out;
+}
+.practice-live-preview strong { color: var(--primary-color); }
+
+/* Filters */
+.practice-filters {
+  display: flex; gap: 1rem; flex-wrap: wrap;
+  align-items: center; margin-bottom: 1.5rem;
+}
+.practice-search {
+  padding: 0.6rem 1rem; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--bg-primary);
+  color: var(--text); font-family: 'Poppins', sans-serif;
+  font-size: 0.95rem; flex: 1; min-width: 180px;
+  transition: var(--transition);
+}
+.practice-search:focus { outline: none; border-color: var(--primary-color); }
+.filter-pills { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.filter-pill {
+  padding: 0.4rem 0.9rem; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-secondary); font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; transition: var(--transition); font-family: 'Poppins', sans-serif;
+}
+.filter-pill:hover { border-color: var(--primary-color); color: var(--primary-color); }
+.filter-pill.active {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white; border-color: transparent;
+}
+
+/* Practice Cards */
+.practices-list { display: flex; flex-direction: column; gap: 1.2rem; }
+.practice-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.4rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+  animation: slideUp 0.4s ease-out;
+  position: relative;
+}
+.practice-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+.reattempt-badge {
+  position: absolute; top: -10px; left: 1.2rem;
+  background: var(--secondary-color);
+  color: white; font-size: 0.72rem; font-weight: 700;
+  padding: 0.2rem 0.7rem; border-radius: 20px;
+}
+
+.practice-card-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 1rem; gap: 1rem;
+}
+.practice-sheet-name { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.3rem; }
+.practice-meta { display: flex; gap: 1rem; font-size: 0.82rem; color: var(--text-secondary); flex-wrap: wrap; }
+
+.practice-accuracy-badge {
+  color: white; font-weight: 800; font-size: 1rem;
+  padding: 0.4rem 0.9rem; border-radius: 12px;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+.practice-stats-row {
+  display: flex; gap: 0.8rem; flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.pstat {
+  display: flex; flex-direction: column; align-items: center;
+  background: var(--surface); border-radius: 10px;
+  padding: 0.5rem 0.9rem; flex: 1; min-width: 60px;
+  border: 1px solid var(--border);
+}
+.pstat.green { border-color: var(--accent-green); }
+.pstat.red   { border-color: var(--accent-red); }
+.pstat.orange{ border-color: var(--accent-orange); }
+.pstat.purple{ border-color: var(--secondary-color); }
+.pstat-label { font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; }
+.pstat-val   { font-size: 1.2rem; font-weight: 800; color: var(--text); }
+
+/* Progress bar */
+.practice-progress-bar {
+  height: 8px; background: var(--surface); border-radius: 10px;
+  overflow: hidden; margin-bottom: 1rem;
+  display: flex;
+}
+.ppbar-correct {
+  height: 100%; background: var(--accent-green);
+  transition: width 0.5s ease;
+}
+.ppbar-wrong {
+  height: 100%; background: var(--accent-red);
+  transition: width 0.5s ease;
+}
+
+/* Card action buttons */
+.practice-card-actions {
+  display: flex; gap: 0.6rem; justify-content: flex-end; flex-wrap: wrap;
+}
+.btn-action {
+  padding: 0.4rem 0.9rem; border: none; border-radius: 8px;
+  font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  transition: var(--transition); font-family: 'Poppins', sans-serif;
+}
+.btn-action.reattempt {
+  background: rgba(139, 92, 246, 0.12); color: var(--secondary-color);
+  border: 1px solid var(--secondary-color);
+}
+.btn-action.reattempt:hover { background: var(--secondary-color); color: white; }
+.btn-action.edit {
+  background: rgba(59, 130, 246, 0.12); color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+}
+.btn-action.edit:hover { background: var(--primary-color); color: white; }
+.btn-action.del {
+  background: rgba(239, 68, 68, 0.1); color: var(--accent-red);
+  border: 1px solid var(--accent-red);
+}
+.btn-action.del:hover { background: var(--accent-red); color: white; }
+
+/* Empty state */
+.empty-state {
+  text-align: center; padding: 3rem 1rem;
+  color: var(--text-secondary); animation: fadeIn 0.5s ease-out;
+}
