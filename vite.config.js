@@ -26,7 +26,13 @@ export default defineConfig({
           }
         ]
       }
-    }),
-    { define : { process.env}}
-  ]
+    })
+  ],
+  // define ko yahaan rakhna sahi jagah hai, plugins ke andar nahi
+  define: {
+    // agar kisi library ko process.env chahiye (as a global), to aise inject kar sakte hain
+    // lekin normally Vite mein `import.meta.env` use karna behtar hai
+    'process.env': {}
+    // specific variable ke liye: 'process.env.REACT_APP_FIREBASE_API_KEY': JSON.stringify(process.env.REACT_APP_FIREBASE_API_KEY)
+  }
 })
