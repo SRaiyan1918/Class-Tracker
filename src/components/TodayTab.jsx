@@ -40,9 +40,16 @@ function AutoInput({ id, label, icon, value, onChange, placeholder, suggestions,
 
   const filtered = useMemo(() => {
     const pool = suggestions || [];
-    if (!value.trim()) return pool.slice(0, 8);
+    // CI dedup within the pool before filtering
+    const seen = new Map();
+    for (const v of pool) {
+      const k = v.toLowerCase().trim();
+      if (!seen.has(k)) seen.set(k, v);
+    }
+    const deduped = [...seen.values()];
+    if (!value.trim()) return deduped.slice(0, 8);
     const q = value.toLowerCase();
-    return pool
+    return deduped
       .filter(s => s.toLowerCase().includes(q))
       .sort((a, b) => {
         const as = a.toLowerCase().startsWith(q);
@@ -120,23 +127,36 @@ export default function TodayTab({ classes, onRefresh, onNotify, user }) {
     return `Classes — ${dateStr}`;
   }
 
-  // ── Suggestion pools ──
-  const allTeachers = useMemo(() => [...new Set(classes.map(c => c.teacher).filter(Boolean))], [classes]);
-  const allChapters = useMemo(() => [...new Set(classes.map(c => c.chapter).filter(Boolean))], [classes]);
-  const allTopics   = useMemo(() => [...new Set(classes.map(c => c.topic).filter(Boolean))], [classes]);
-  const allSubjects = useMemo(() => [...new Set(classes.map(c => c.subject).filter(Boolean))], [classes]);
+  // ── Suggestion pools (case-insensitive dedup: keep most recent casing) ──
+  function dedupCI(arr) {
+    const seen = new Map();
+    for (const v of arr) {
+      const key = v.toLowerCase().trim();
+      if (!seen.has(key)) seen.set(key, v);
+    }
+    return [...seen.values()];
+  }
+  // Sort by most recent so latest casing wins in dedup
+  const byRecent = useMemo(() =>
+    [...classes].sort((a,b) => new Date(b.timestamp?.toDate?.() || b.timestamp) - new Date(a.timestamp?.toDate?.() || a.timestamp)),
+  [classes]);
+  const allTeachers = useMemo(() => dedupCI(byRecent.map(c => c.teacher).filter(Boolean)), [byRecent]);
+  const allChapters = useMemo(() => dedupCI(byRecent.map(c => c.chapter).filter(Boolean)), [byRecent]);
+  const allTopics   = useMemo(() => dedupCI(byRecent.map(c => c.topic).filter(Boolean)),   [byRecent]);
+  const allSubjects = useMemo(() => dedupCI(byRecent.map(c => c.subject).filter(Boolean)), [byRecent]);
 
-  // Subject-scoped suggestions: most recent first from same subject, then rest
+  // Subject-scoped suggestions: most recent first from same subject, then rest (CI dedup)
   function scopedSugg(field, allPool) {
     if (!form.subject) return allPool;
-    const fromSubj = [...new Set(
+    const fromSubj = dedupCI(
       classes
         .filter(c => c.subject === form.subject)
         .sort((a, b) => new Date(b.timestamp?.toDate?.() || b.timestamp) - new Date(a.timestamp?.toDate?.() || a.timestamp))
         .map(c => c[field])
         .filter(Boolean)
-    )];
-    const rest = allPool.filter(s => !fromSubj.includes(s));
+    );
+    const fromSubjLower = new Set(fromSubj.map(s => s.toLowerCase().trim()));
+    const rest = allPool.filter(s => !fromSubjLower.has(s.toLowerCase().trim()));
     return [...fromSubj, ...rest];
   }
 
@@ -235,14 +255,14 @@ export default function TodayTab({ classes, onRefresh, onNotify, user }) {
 
         {/* Date nav row */}
         <div className="date-nav-row">
-          <button className="day-nav-btn" onClick={() => goDay(-1)} title="Previous day">‹</button>
+          <button className="day-nav-btn" onClick={() => goDay(-1)} title="Previous day">&#8249;</button>
           <input
             type="date"
             value={selectedDate}
             onChange={e => setSelectedDate(e.target.value)}
             className="date-nav-input"
           />
-          <button className="day-nav-btn" onClick={() => goDay(1)} title="Next day">›</button>
+          <button className="day-nav-btn" onClick={() => goDay(1)} title="Next day">&#8250;</button>
         </div>
       </div>
 
