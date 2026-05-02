@@ -3,7 +3,7 @@ import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 // ── QuizForge URL — apna deployed URL yahan likho ──
-const QUIZFORGE_URL = 'https://raiyan-quizforge.netlify.app/';
+const QUIZFORGE_URL = 'https://raiyan-quizforge.netlify.app';
 
 // ── Yahan wahi sheets likho jo QuizForge mein hain ──
 // id aur baaki fields QuizForge ke JSON se match karni chahiye
@@ -30,9 +30,11 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
   const [filterSubject, setFilterSubject] = useState('All');
   const [activeSection, setActiveSection] = useState('sheets'); // 'sheets' | 'history'
 
-  // Open QuizForge for a specific sheet
+  // Open QuizForge for a specific sheet — uid pass karo taaki sign in na karna pade
   const handleAttempt = (sheet) => {
-    const url = `${QUIZFORGE_URL}?sheetId=${sheet.id}`;
+    const uid = user?.uid;
+    if (!uid) { onNotify('Please sign in first', 'error'); return; }
+    const url = `${QUIZFORGE_URL}?sheetId=${sheet.id}&uid=${uid}`;
     window.open(url, '_blank');
   };
 
@@ -257,7 +259,7 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
                   </div>
 
                   <div className="practice-card-actions">
-                    <button className="btn-action reattempt" onClick={() => window.open(`${QUIZFORGE_URL}?sheetId=${p.sheetId}`, '_blank')}>
+                    <button className="btn-action reattempt" onClick={() => window.open(`${QUIZFORGE_URL}?sheetId=${p.sheetId}&uid=${user?.uid}`, '_blank')}>
                       🔁 Reattempt
                     </button>
                     <button className="btn-action del" onClick={() => handleDelete(p.id)}>🗑️</button>
