@@ -182,3 +182,94 @@
     border-right-color: var(--border);
   }
 }
+
+/* ── QuizForge Integration Styles ── */
+.qf-sheets-section { margin-top: 8px; }
+
+.qf-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border-left: 3px solid #6c5ce7;
+}
+
+.qf-subject-group { margin-bottom: 20px; }
+
+.qf-subject-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.qf-sheet-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+.qf-sheet-card:hover { border-color: #6c5ce7; }
+
+.qf-sheet-left { flex: 1; min-width: 0; }
+
+.qf-sheet-chapter {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a594f9;
+  font-family: monospace;
+  margin-bottom: 3px;
+}
+
+.qf-sheet-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.qf-sheet-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.paused-chip {
+  background: rgba(251,191,36,0.15);
+  color: #fbbf24;
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-weight: 600;
+}
+
+.btn-attempt {
+  background: #6c5ce7;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.btn-attempt:hover { background: #a594f9; transform: translateY(-1px); }
+
+.btn-secondary.active {
+  background: #6c5ce7;
+  color: #fff;
+  border-color: #6c5ce7;
+}
