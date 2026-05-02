@@ -96,11 +96,23 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
         <h2>📋 Practice Tracker</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
-            className={`btn-secondary ${activeSection === 'sheets' ? 'active' : ''}`}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)',
+              cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '13px',
+              background: activeSection === 'sheets' ? '#6c5ce7' : 'var(--surface)',
+              color: activeSection === 'sheets' ? '#fff' : 'var(--text)',
+              transition: 'all 0.2s'
+            }}
             onClick={() => setActiveSection('sheets')}
           >📚 Sheets</button>
           <button
-            className={`btn-secondary ${activeSection === 'history' ? 'active' : ''}`}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)',
+              cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '13px',
+              background: activeSection === 'history' ? '#6c5ce7' : 'var(--surface)',
+              color: activeSection === 'history' ? '#fff' : 'var(--text)',
+              transition: 'all 0.2s'
+            }}
             onClick={() => setActiveSection('history')}
           >📜 History</button>
         </div>
@@ -120,29 +132,60 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
 
       {/* ── SHEETS SECTION ── */}
       {activeSection === 'sheets' && (
-        <div className="qf-sheets-section">
-          <p className="qf-hint">🔗 QuizForge se connect hai — kisi bhi sheet pe "Attempt" karo</p>
+        <div style={{ marginTop: '8px' }}>
+          <p style={{
+            fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px',
+            padding: '8px 12px', background: 'var(--bg-secondary)',
+            borderRadius: '8px', borderLeft: '3px solid #6c5ce7'
+          }}>
+            🔗 QuizForge se connect hai — kisi bhi sheet pe "Attempt" karo
+          </p>
           {Object.entries(sheetsBySubject).map(([subject, sheets]) => (
-            <div key={subject} className="qf-subject-group">
-              <div className="qf-subject-label">{subject}</div>
+            <div key={subject} style={{ marginBottom: '20px' }}>
+              <div style={{
+                fontSize: '11px', fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: '1px', color: 'var(--text-muted)',
+                marginBottom: '8px', padding: '0 4px'
+              }}>{subject}</div>
               {sheets.map(sheet => {
                 const stats = getSheetStats(sheet.id);
                 const mins = Math.floor((sheet.totalTime || 600) / 60);
                 const hasPaused = (practices || []).some(p => p.sheetId === sheet.id && p.status === 'paused');
                 return (
-                  <div key={sheet.id} className="qf-sheet-card">
-                    <div className="qf-sheet-left">
-                      <div className="qf-sheet-chapter">{sheet.chapter}</div>
-                      <div className="qf-sheet-title">{sheet.title}</div>
-                      <div className="qf-sheet-meta">
+                  <div key={sheet.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    gap: '12px', background: 'var(--card-bg)', border: '1px solid var(--border)',
+                    borderRadius: '12px', padding: '14px 16px', marginBottom: '8px',
+                    transition: 'border-color 0.2s'
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#a594f9', fontFamily: 'monospace', marginBottom: '3px' }}>
+                        {sheet.chapter}
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '6px' }}>
+                        {sheet.title}
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', fontSize: '11px', color: 'var(--text-muted)' }}>
                         <span>❓ {sheet.totalQns} Qns</span>
                         <span>◷ {mins} min</span>
                         {stats && <span>✅ {stats.last.accuracy}% last</span>}
                         {stats && <span>🔁 {stats.count}x attempted</span>}
-                        {hasPaused && <span className="paused-chip">⏸ Paused</span>}
+                        {hasPaused && (
+                          <span style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24', padding: '1px 7px', borderRadius: '99px', fontWeight: 600 }}>
+                            ⏸ Paused
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <button className="btn-attempt" onClick={() => handleAttempt(sheet)}>
+                    <button
+                      onClick={() => handleAttempt(sheet)}
+                      style={{
+                        background: '#6c5ce7', color: '#fff', border: 'none',
+                        borderRadius: '8px', padding: '8px 16px', fontSize: '13px',
+                        fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                        fontFamily: 'Poppins, sans-serif', transition: 'all 0.2s'
+                      }}
+                    >
                       {hasPaused ? '▶ Resume' : stats ? '🔁 Reattempt' : '▶ Attempt'}
                     </button>
                   </div>
