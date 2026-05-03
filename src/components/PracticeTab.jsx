@@ -8,8 +8,8 @@ const QUIZFORGE_URL = 'https://raiyan-quizforge.netlify.app/';
 // ── Yahan wahi sheets likho jo QuizForge mein hain ──
 // id aur baaki fields QuizForge ke JSON se match karni chahiye
 const QUIZFORGE_SHEETS = [
-  { id: 'KPP_01', title: 'KPP 01 : Electrostatics', chapter: 'Electrostatics', subject: 'Physics', totalQns: 15, totalTime: 2700 },
-  { id: 'KPP_02', title: 'Matrices : DPP 01',       chapter: 'Matrices',       subject: 'Mathematics', totalQns: 10, totalTime: 900 },
+  { id: 'KPP_01', title: 'KPP 01', chapter: 'Electrostatics', subject: 'Physics', totalQns: 15, totalTime: 2700 },
+  { id: 'KPP_02', title: 'KPP 02', chapter: 'Electrostatics', subject: 'Physics', totalQns: 21, totalTime: 2700 },
   // Naye sheets yahan add karo jab QuizForge mein add karo
 ];
 
