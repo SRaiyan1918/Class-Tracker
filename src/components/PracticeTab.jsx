@@ -3,7 +3,7 @@ import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 // ── QuizForge URL — apna deployed URL yahan likho ──
-const QUIZFORGE_URL = 'https://raiyan-quizforge.netlify.app';
+const QUIZFORGE_URL = 'https://your-quizforge-app.netlify.app';
 
 // ── Yahan wahi sheets likho jo QuizForge mein hain ──
 // id aur baaki fields QuizForge ke JSON se match karni chahiye
@@ -259,6 +259,15 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
                   </div>
 
                   <div className="practice-card-actions">
+                    {p.source === 'quizforge' && p.status === 'completed' && (
+                      <button
+                        className="btn-action"
+                        style={{ background: 'rgba(108,92,231,0.12)', color: '#a594f9', border: '1px solid rgba(108,92,231,0.3)' }}
+                        onClick={() => window.open(`${QUIZFORGE_URL}?reviewId=${p.id}&uid=${user?.uid}`, '_blank')}
+                      >
+                        🔬 Deep Analysis
+                      </button>
+                    )}
                     <button className="btn-action reattempt" onClick={() => window.open(`${QUIZFORGE_URL}?sheetId=${p.sheetId}&uid=${user?.uid}`, '_blank')}>
                       🔁 Reattempt
                     </button>
