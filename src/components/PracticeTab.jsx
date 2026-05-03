@@ -3,7 +3,7 @@ import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 // ── QuizForge URL — apna deployed URL yahan likho ──
-const QUIZFORGE_URL = 'https://your-quizforge-app.netlify.app';
+const QUIZFORGE_URL = 'https://raiyan-quizforge.netlify.app/';
 
 // ── Yahan wahi sheets likho jo QuizForge mein hain ──
 // id aur baaki fields QuizForge ke JSON se match karni chahiye
