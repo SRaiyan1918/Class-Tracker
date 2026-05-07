@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, browserLocalPersistence, setPersistence } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBJlbrpeafFnESAfHTu24bTENjVfLQYZf0",
@@ -17,5 +17,5 @@ export const db       = getFirestore(app);
 export const auth     = getAuth(app);
 export const provider = new GoogleAuthProvider();
 
-// Browser band hone ke baad bhi login bani rahe (localStorage mein session save hoga)
 setPersistence(auth, browserLocalPersistence);
+
