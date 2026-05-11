@@ -897,3 +897,64 @@ body {
   color: var(--accent-red);
 }
 .tca-del:hover { background: var(--accent-red); color: #fff; }
+
+/* ========================================
+   UNDO TOAST
+   ======================================== */
+.undo-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: #fff;
+  border-radius: 14px;
+  padding: 0.75rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  z-index: 2000;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  min-width: 260px;
+  max-width: 90vw;
+  animation: slideUp 0.25s ease-out;
+}
+.undo-toast > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.85rem;
+}
+.undo-btn {
+  background: #ef4444;
+  border: none;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.82rem;
+  padding: 0.28rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.undo-btn:hover { background: #dc2626; }
+
+/* ========================================
+   MODAL SCROLL FIX
+   ======================================== */
+.modal-overlay {
+  overscroll-behavior: contain;
+}
+.modal-box {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+/* Prevent page from jumping when input focused inside modal */
+.modal-box input,
+.modal-box textarea,
+.modal-box select {
+  font-size: 16px !important; /* prevents iOS zoom which causes scroll jump */
+}
