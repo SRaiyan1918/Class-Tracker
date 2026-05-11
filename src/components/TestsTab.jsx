@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -42,9 +42,9 @@ function useSubjectPrefs(uid) {
 // User types "45" hits Enter/Space/comma → chip appears
 function QnTagInput({ tags, onChange, placeholder }) {
   const [input, setInput] = useState('');
+  const inputRef = useRef(null); // useRef instead of id — avoids same-id collision across subjects
 
   function commit(raw) {
-    // support multiple nums separated by space/comma
     const nums = raw.split(/[\s,]+/).map(s => s.trim()).filter(s => /^\d+$/.test(s));
     if (!nums.length) return;
     const next = [...new Set([...tags, ...nums])];
@@ -53,7 +53,7 @@ function QnTagInput({ tags, onChange, placeholder }) {
   }
 
   function onKey(e) {
-    if (['Enter',',' ,' '].includes(e.key)) {
+    if (['Enter',',',' '].includes(e.key)) {
       e.preventDefault();
       commit(input);
     } else if (e.key === 'Backspace' && !input && tags.length) {
@@ -70,7 +70,7 @@ function QnTagInput({ tags, onChange, placeholder }) {
       background: 'transparent', minHeight: 38, cursor: 'text',
       alignItems: 'center',
     }}
-      onClick={() => document.getElementById('qn-input-' + placeholder)?.focus()}
+      onClick={() => inputRef.current?.focus()}
     >
       {tags.map(t => (
         <span key={t} style={{
@@ -85,7 +85,7 @@ function QnTagInput({ tags, onChange, placeholder }) {
         </span>
       ))}
       <input
-        id={`qn-input-${placeholder}`}
+        ref={inputRef}
         value={input}
         onChange={e => setInput(e.target.value)}
         onKeyDown={onKey}
