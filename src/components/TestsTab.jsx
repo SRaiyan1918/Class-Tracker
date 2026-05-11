@@ -184,7 +184,7 @@ function SubjectPickerModal({ current, onSave, onClose }) {
   const [sel, setSel] = useState(current);
   function toggle(s) { setSel(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]); }
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()} onTouchMove={e => e.stopPropagation()}>
       <div className="modal-box" style={{ maxWidth: 360 }}>
         <div className="modal-header">
           <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>📚 Your Subjects</div>
@@ -258,7 +258,7 @@ function AnalysisModal({ test, onClose, onSave, existingAnalysis, activeSubjects
     }));
 
     return (
-      <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()} onTouchMove={e => e.stopPropagation()}>
         <div className="modal-box">
           <div className="modal-header">
             <div>
@@ -340,7 +340,7 @@ function AnalysisModal({ test, onClose, onSave, existingAnalysis, activeSubjects
 
   // ── Edit / Fill mode ──
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()} onTouchMove={e => e.stopPropagation()}>
       <div className="modal-box">
         <div className="modal-header">
           <div>
@@ -499,7 +499,7 @@ function EditTestModal({ test, onClose, onSave }) {
     onClose();
   }
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()} onTouchMove={e => e.stopPropagation()}>
       <div className="modal-box" style={{ maxWidth: 420 }}>
         <div className="modal-header">
           <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>✏️ Edit Test</div>
@@ -525,6 +525,27 @@ function EditTestModal({ test, onClose, onSave }) {
   );
 }
 
+// ─── Undo Timer Bar ──────────────────────────────────────────────────────────
+function UndoTimer() {
+  const [pct, setPct] = useState(100);
+  useEffect(() => {
+    const start = Date.now();
+    const total = 5000;
+    const id = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const remaining = Math.max(0, ((total - elapsed) / total) * 100);
+      setPct(remaining);
+      if (remaining === 0) clearInterval(id);
+    }, 50);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div style={{ height: 3, background: 'rgba(255,255,255,0.25)', borderRadius: 99, overflow: 'hidden', marginTop: '0.4rem' }}>
+      <div style={{ width: `${pct}%`, height: '100%', background: '#fff', borderRadius: 99, transition: 'width 0.05s linear' }} />
+    </div>
+  );
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function TestsTab({ tests, onRefresh, onNotify, user }) {
   const [showForm, setShowForm]           = useState(false);
@@ -533,6 +554,7 @@ export default function TestsTab({ tests, onRefresh, onNotify, user }) {
   const [editTest, setEditTest]           = useState(null);
   const [showSubjectPicker, setShowSubjectPicker] = useState(false);
   const [activeSubjects, saveSubjects]    = useSubjectPrefs(user.uid);
+  const [pendingDelete, setPendingDelete] = useState(null); // { id, name, timerRef }
 
   function handleChange(e) {
     const { id, value } = e.target;
@@ -555,10 +577,22 @@ export default function TestsTab({ tests, onRefresh, onNotify, user }) {
     } catch { onNotify('Failed to add test', 'error'); }
   }
 
-  async function handleDelete(id) {
-    if (!confirm('Delete this test?')) return;
-    try { await deleteDoc(doc(db, 'tests', id)); onRefresh(); onNotify('Test deleted', 'success'); }
-    catch { onNotify('Failed to delete', 'error'); }
+  function handleDelete(id, name) {
+    // Cancel any existing pending delete
+    if (pendingDelete?.timerRef) clearTimeout(pendingDelete.timerRef);
+    // Schedule actual delete after 5s
+    const timerRef = setTimeout(async () => {
+      try { await deleteDoc(doc(db, 'tests', id)); onRefresh(); }
+      catch { onNotify('Failed to delete', 'error'); }
+      setPendingDelete(null);
+    }, 5000);
+    setPendingDelete({ id, name, timerRef });
+  }
+
+  function handleUndoDelete() {
+    if (pendingDelete?.timerRef) clearTimeout(pendingDelete.timerRef);
+    setPendingDelete(null);
+    onNotify('Delete cancelled ✓', 'success');
   }
 
   async function handleSaveAnalysis(testId, data) {
@@ -639,7 +673,7 @@ export default function TestsTab({ tests, onRefresh, onNotify, user }) {
                           {hasAnalysis ? '📊' : '📊'}
                           <span>{hasAnalysis ? 'View' : 'Analyse'}</span>
                         </button>
-                        <button onClick={() => handleDelete(test.id)} className="tca-btn tca-del">🗑️</button>
+                        <button onClick={() => handleDelete(test.id, test.name)} className="tca-btn tca-del">🗑️</button>
                       </div>
                     </div>
                   );
@@ -668,6 +702,15 @@ export default function TestsTab({ tests, onRefresh, onNotify, user }) {
       )}
       {showSubjectPicker && (
         <SubjectPickerModal current={activeSubjects} onSave={saveSubjects} onClose={() => setShowSubjectPicker(false)} />
+      )}
+
+      {/* Undo Delete Toast */}
+      {pendingDelete && (
+        <div className="undo-toast">
+          <span>🗑️ "<strong>{pendingDelete.name}</strong>" deleting…</span>
+          <button onClick={handleUndoDelete} className="undo-btn">↩ Undo</button>
+          <UndoTimer onDone={() => {}} />
+        </div>
       )}
     </section>
   );
