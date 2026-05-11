@@ -130,16 +130,18 @@ function ReasonPicker({ selected, onChange, presets, placeholder }) {
             }}>{selected.includes(r) ? '✓ ' : ''}{r}</button>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: '0.35rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
         <input value={custom} onChange={e => setCustom(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustom())}
           placeholder={placeholder}
-          style={{ flex: 1, fontSize: '0.78rem', padding: '0.28rem 0.55rem', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', fontFamily: 'inherit' }}
+          style={{ width: '100%', fontSize: '0.82rem', padding: '0.38rem 0.65rem', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box' }}
         />
-        <button type="button" onClick={addCustom}
-          style={{ padding: '0.28rem 0.65rem', borderRadius: 8, border: 'none', background: 'var(--primary-color)', color: '#fff', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-          +
-        </button>
+        {custom.trim() && (
+          <button type="button" onClick={addCustom}
+            style={{ alignSelf: 'flex-start', padding: '0.28rem 0.9rem', borderRadius: 8, border: 'none', background: 'var(--primary-color)', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            + Add "{custom.trim()}"
+          </button>
+        )}
       </div>
     </div>
   );
