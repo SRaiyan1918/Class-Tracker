@@ -1,0 +1,15 @@
+[[headers]]
+  for = "/ads.txt"
+  [headers.values]
+    Content-Type = "text/plain"
+
+[[redirects]]
+  from = "/ads.txt"
+  to = "/ads.txt"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
