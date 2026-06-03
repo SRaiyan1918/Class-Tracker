@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, getIdToken } from 'firebase/auth';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -19,9 +19,8 @@ export default function App() {
   const [practices, setPractices]   = useState([]);
   const [notification, setNotification] = useState(null);
 
-  // Auth state
-  const [user, setUser]         = useState(null);
-  const [authLoading, setAuthLoading] = useState(true); // show nothing until auth resolves
+  const [user, setUser]           = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   /* ── Theme ── */
   useEffect(() => {
@@ -38,11 +37,48 @@ export default function App() {
     return unsub;
   }, []);
 
-  /* ── Load data — filtered by uid ── */
-  const loadData = useCallback(async () => {
+  /* ── FIX 1: Proactive token refresh har 45 min ──
+     Firebase token 60 min mein expire hota hai.
+     45 min pe refresh karo taaki kabhi expire na ho. */
+  useEffect(() => {
     if (!user) return;
+    const INTERVAL = 45 * 60 * 1000; // 45 minutes
+    const timer = setInterval(async () => {
+      try {
+        if (auth.currentUser) await getIdToken(auth.currentUser, true);
+      } catch (e) {
+        console.warn('Token refresh failed:', e);
+      }
+    }, INTERVAL);
+    return () => clearInterval(timer);
+  }, [user]);
+
+  /* ── FIX 2: App wapas foreground mein aaye to token refresh + data reload ──
+     Ye sabse important fix hai — phone unlock karo ya tab switch karo
+     to token turant refresh hota hai, data bhi reload hota hai. */
+  useEffect(() => {
+    if (!user) return;
+    async function handleVisibility() {
+      if (document.visibilityState === 'visible') {
+        try {
+          if (auth.currentUser) {
+            await getIdToken(auth.currentUser, true);
+            await loadData();
+          }
+        } catch (e) {
+          console.warn('Visibility token refresh failed:', e);
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [user]);
+
+  /* ── Load data ── */
+  const loadData = useCallback(async () => {
+    if (!auth.currentUser) return;
     try {
-      const uid = user.uid;
+      const uid = auth.currentUser.uid;
       const [classSnap, testSnap, practiceSnap] = await Promise.all([
         getDocs(query(collection(db, 'classes'),   where('uid', '==', uid))),
         getDocs(query(collection(db, 'tests'),     where('uid', '==', uid))),
@@ -52,9 +88,29 @@ export default function App() {
       setTests(testSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       setPractices(practiceSnap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
-      showNotification('Failed to load data', 'error');
+      /* ── FIX 3: Permission error pe token refresh karke retry ──
+         Agar Firestore permission deny kare to pehle token refresh karo
+         phir ek baar aur try karo — user ko logout nahi karna padega. */
+      if (e.code === 'permission-denied' || e.code === 'unauthenticated') {
+        try {
+          await getIdToken(auth.currentUser, true);
+          const uid = auth.currentUser.uid;
+          const [classSnap, testSnap, practiceSnap] = await Promise.all([
+            getDocs(query(collection(db, 'classes'),   where('uid', '==', uid))),
+            getDocs(query(collection(db, 'tests'),     where('uid', '==', uid))),
+            getDocs(query(collection(db, 'practices'), where('uid', '==', uid))),
+          ]);
+          setClasses(classSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+          setTests(testSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+          setPractices(practiceSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        } catch {
+          showNotification('Session expired, please refresh', 'error');
+        }
+      } else {
+        showNotification('Failed to load data', 'error');
+      }
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     if (user) loadData();
@@ -66,7 +122,6 @@ export default function App() {
     setTimeout(() => setNotification(null), 3000);
   }
 
-  /* ── Loading screen ── */
   if (authLoading) {
     return (
       <div className="auth-loading">
@@ -75,10 +130,8 @@ export default function App() {
     );
   }
 
-  /* ── Not logged in → Login page ── */
   if (!user) return <LoginPage />;
 
-  /* ── Logged in → Main app ── */
   return (
     <div className="app-container">
       <Header
