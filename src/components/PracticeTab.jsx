@@ -7,35 +7,57 @@ const EMPTY_FORM = {
   subject: '',
   date: '',
   totalQns: '',
-  correct: '',
-  wrong: '',
+  attempted: '',
+  revisionInput: '',
 };
 
-function calcStats(correct, wrong, total) {
-  const c = parseInt(correct) || 0;
-  const w = parseInt(wrong) || 0;
-  const t = parseInt(total) || 0;
-  const touched = c + w;
-  const skipped = Math.max(0, t - touched);
-  const accuracy = touched > 0 ? ((c / touched) * 100).toFixed(1) : '0.0';
-  return { touched, skipped, accuracy: parseFloat(accuracy) };
+const SUBJECTS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'Other'];
+
+// Parse "3, 7, 12 15" style input into a clean, sorted, unique array of numbers
+function parseRevisionInput(str) {
+  if (!str) return [];
+  return [...new Set(
+    str
+      .split(/[,\s]+/)
+      .map(x => x.trim())
+      .filter(Boolean)
+      .map(x => parseInt(x))
+      .filter(x => !isNaN(x) && x > 0)
+  )].sort((a, b) => a - b);
 }
 
-const SUBJECTS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'Other'];
+function calcProgress(totalQns, attempted) {
+  const t = parseInt(totalQns) || 0;
+  const a = Math.min(parseInt(attempted) || 0, t);
+  const remaining = Math.max(0, t - a);
+  const pct = t > 0 ? Math.round((a / t) * 100) : 0;
+  return { total: t, attempted: a, remaining, pct };
+}
+
+// Backward-compatible readers for old test-style entries saved before this update
+function getAttempted(p) {
+  if (p.attempted !== undefined && p.attempted !== null) return p.attempted;
+  if (p.touched !== undefined) return p.touched; // old schema fallback
+  return 0;
+}
+function getRevisionQns(p) {
+  return Array.isArray(p.revisionQns) ? p.revisionQns : [];
+}
 
 export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
-  const [reattemptOf, setReattemptOf] = useState(null); // original practice id
   const [searchQ, setSearchQ] = useState('');
   const [filterSubject, setFilterSubject] = useState('All');
+  const [revisionOnly, setRevisionOnly] = useState(false);
 
-  // Live preview stats while filling form
-  const liveStats = useMemo(() => {
-    if (!form.correct && !form.wrong) return null;
-    return calcStats(form.correct, form.wrong, form.totalQns);
-  }, [form.correct, form.wrong, form.totalQns]);
+  const liveProgress = useMemo(() => {
+    if (!form.totalQns) return null;
+    return calcProgress(form.totalQns, form.attempted);
+  }, [form.totalQns, form.attempted]);
+
+  const liveRevisionCount = useMemo(() => parseRevisionInput(form.revisionInput).length, [form.revisionInput]);
 
   function handleChange(e) {
     const { id, value } = e.target;
@@ -44,35 +66,19 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
 
   function openAdd() {
     setEditingId(null);
-    setReattemptOf(null);
     setForm(EMPTY_FORM);
     setShowForm(true);
   }
 
   function openEdit(p) {
     setEditingId(p.id);
-    setReattemptOf(null);
     setForm({
       sheetName: p.sheetName,
       subject: p.subject,
       date: p.date,
       totalQns: String(p.totalQns),
-      correct: String(p.correct),
-      wrong: String(p.wrong),
-    });
-    setShowForm(true);
-  }
-
-  function openReattempt(p) {
-    setEditingId(null);
-    setReattemptOf(p.id);
-    setForm({
-      sheetName: p.sheetName + ' (R)',
-      subject: p.subject,
-      date: new Date().toISOString().split('T')[0],
-      totalQns: String(p.totalQns),
-      correct: '',
-      wrong: '',
+      attempted: String(getAttempted(p)),
+      revisionInput: getRevisionQns(p).join(', '),
     });
     setShowForm(true);
   }
@@ -80,24 +86,21 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
   function closeForm() {
     setShowForm(false);
     setEditingId(null);
-    setReattemptOf(null);
     setForm(EMPTY_FORM);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const { touched, skipped, accuracy } = calcStats(form.correct, form.wrong, form.totalQns);
+    const { total, attempted, remaining } = calcProgress(form.totalQns, form.attempted);
+    const revisionQns = parseRevisionInput(form.revisionInput);
     const data = {
       sheetName: form.sheetName.trim(),
       subject: form.subject,
       date: form.date,
-      totalQns: parseInt(form.totalQns),
-      correct: parseInt(form.correct) || 0,
-      wrong: parseInt(form.wrong) || 0,
-      touched,
-      skipped,
-      accuracy,
-      reattemptOf: reattemptOf || null,
+      totalQns: total,
+      attempted,
+      remaining,
+      revisionQns,
       timestamp: new Date(),
     };
 
@@ -107,7 +110,7 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
         onNotify('Practice updated!', 'success');
       } else {
         await addDoc(collection(db, 'practices'), { ...data, uid: user.uid });
-        onNotify(reattemptOf ? 'Reattempt added!' : 'Practice added!', 'success');
+        onNotify('Practice added!', 'success');
       }
       closeForm();
       onRefresh();
@@ -127,30 +130,40 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
     }
   }
 
+  // Clear a single question number off the revision list once it's been revised
+  async function handleClearRevision(p, num) {
+    const updated = getRevisionQns(p).filter(n => n !== num);
+    try {
+      await updateDoc(doc(db, 'practices', p.id), { revisionQns: updated });
+      onRefresh();
+    } catch {
+      onNotify('Failed to update revision list', 'error');
+    }
+  }
+
   // Filtered list
   const filtered = useMemo(() => {
     return (practices || []).filter(p => {
       const matchSubject = filterSubject === 'All' || p.subject === filterSubject;
       const q = searchQ.toLowerCase();
       const matchSearch = !q || p.sheetName?.toLowerCase().includes(q) || p.subject?.toLowerCase().includes(q);
-      return matchSubject && matchSearch;
+      const matchRevision = !revisionOnly || getRevisionQns(p).length > 0;
+      return matchSubject && matchSearch && matchRevision;
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [practices, searchQ, filterSubject]);
+  }, [practices, searchQ, filterSubject, revisionOnly]);
 
   // Summary stats
   const summary = useMemo(() => {
     const list = practices || [];
     const totalSheets = list.length;
     const totalQns = list.reduce((s, p) => s + (p.totalQns || 0), 0);
-    const totalCorrect = list.reduce((s, p) => s + (p.correct || 0), 0);
-    const totalWrong = list.reduce((s, p) => s + (p.wrong || 0), 0);
-    const totalTouched = list.reduce((s, p) => s + (p.touched || 0), 0);
-    const totalSkipped = list.reduce((s, p) => s + (p.skipped || 0), 0);
-    const avgAccuracy = totalTouched > 0 ? ((totalCorrect / totalTouched) * 100).toFixed(1) : '0.0';
-    return { totalSheets, totalQns, totalCorrect, totalWrong, totalTouched, totalSkipped, avgAccuracy };
+    const totalAttempted = list.reduce((s, p) => s + getAttempted(p), 0);
+    const totalRemaining = Math.max(0, totalQns - totalAttempted);
+    const totalRevisionPending = list.reduce((s, p) => s + getRevisionQns(p).length, 0);
+    return { totalSheets, totalQns, totalAttempted, totalRemaining, totalRevisionPending };
   }, [practices]);
 
-  const formTitle = editingId ? '✏️ Edit Practice' : reattemptOf ? '🔁 Reattempt' : '➕ Add Practice';
+  const formTitle = editingId ? '✏️ Edit Practice' : '➕ Add Practice';
 
   return (
     <section className="tab-content active">
@@ -174,20 +187,16 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
             <div className="psum-val">{summary.totalQns}</div>
           </div>
           <div className="psum-card green">
-            <div className="psum-label">✅ Correct</div>
-            <div className="psum-val">{summary.totalCorrect}</div>
-          </div>
-          <div className="psum-card red">
-            <div className="psum-label">❌ Wrong</div>
-            <div className="psum-val">{summary.totalWrong}</div>
-          </div>
-          <div className="psum-card orange">
-            <div className="psum-label">⏭️ Skipped</div>
-            <div className="psum-val">{summary.totalSkipped}</div>
+            <div className="psum-label">👆 Attempted</div>
+            <div className="psum-val">{summary.totalAttempted}</div>
           </div>
           <div className="psum-card blue">
-            <div className="psum-label">🎯 Avg Accuracy</div>
-            <div className="psum-val">{summary.avgAccuracy}%</div>
+            <div className="psum-label">⏭️ Remaining</div>
+            <div className="psum-val">{summary.totalRemaining}</div>
+          </div>
+          <div className="psum-card orange">
+            <div className="psum-label">🔁 To Revise</div>
+            <div className="psum-val">{summary.totalRevisionPending}</div>
           </div>
         </div>
       )}
@@ -218,26 +227,32 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
 
             <div className="form-group">
               <label htmlFor="totalQns">❓ Total Questions</label>
-              <input id="totalQns" type="number" min="1" value={form.totalQns} onChange={handleChange} placeholder="e.g., 30" required />
+              <input id="totalQns" type="number" min="1" value={form.totalQns} onChange={handleChange} placeholder="e.g., 50" required />
             </div>
 
             <div className="form-group">
-              <label htmlFor="correct">✅ Correct</label>
-              <input id="correct" type="number" min="0" value={form.correct} onChange={handleChange} placeholder="0" required />
+              <label htmlFor="attempted">👆 Attempted So Far</label>
+              <input id="attempted" type="number" min="0" value={form.attempted} onChange={handleChange} placeholder="e.g., 30" required />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="wrong">❌ Wrong</label>
-              <input id="wrong" type="number" min="0" value={form.wrong} onChange={handleChange} placeholder="0" required />
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="revisionInput">🔁 Question Numbers To Revise (jo nahi bane)</label>
+              <input
+                id="revisionInput"
+                value={form.revisionInput}
+                onChange={handleChange}
+                placeholder="e.g., 3, 7, 12, 21, 34"
+              />
             </div>
           </div>
 
           {/* Live Preview */}
-          {liveStats && (
+          {liveProgress && (
             <div className="practice-live-preview">
-              <span>👆 Touched: <strong>{liveStats.touched}</strong></span>
-              <span>⏭️ Skipped: <strong>{liveStats.skipped}</strong></span>
-              <span>🎯 Accuracy: <strong>{liveStats.accuracy}%</strong></span>
+              <span>👆 Attempted: <strong>{liveProgress.attempted}</strong></span>
+              <span>⏭️ Remaining: <strong>{liveProgress.remaining}</strong></span>
+              <span>🔁 To Revise: <strong>{liveRevisionCount}</strong></span>
+              <span>📊 Progress: <strong>{liveProgress.pct}%</strong></span>
             </div>
           )}
 
@@ -265,6 +280,10 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
                 onClick={() => setFilterSubject(s)}
               >{s}</button>
             ))}
+            <button
+              className={`filter-pill ${revisionOnly ? 'active' : ''}`}
+              onClick={() => setRevisionOnly(v => !v)}
+            >🔁 Revision Pending</button>
           </div>
         </div>
       )}
@@ -272,12 +291,21 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
       {/* Practices List */}
       <div className="practices-list">
         {filtered.map(p => {
-          const accColor = p.accuracy >= 75 ? 'var(--accent-green)' : p.accuracy >= 50 ? 'var(--accent-orange)' : 'var(--accent-red)';
+          const { total, attempted, remaining, pct } = calcProgress(p.totalQns, getAttempted(p));
+          const revisionQns = getRevisionQns(p);
+          const badgeColor = revisionQns.length > 0
+            ? 'var(--accent-orange)'
+            : remaining > 0
+              ? 'var(--primary-color)'
+              : 'var(--accent-green)';
+          const badgeText = revisionQns.length > 0
+            ? `🔁 ${revisionQns.length} to revise`
+            : remaining > 0
+              ? `📝 ${remaining} left`
+              : '✅ Complete';
+
           return (
             <div className="practice-card" key={p.id}>
-              {p.reattemptOf && (
-                <span className="reattempt-badge">🔁 Reattempt</span>
-              )}
               <div className="practice-card-top">
                 <div>
                   <div className="practice-sheet-name">{p.sheetName}</div>
@@ -286,48 +314,59 @@ export default function PracticeTab({ practices, onRefresh, onNotify, user }) {
                     <span>📅 {p.date}</span>
                   </div>
                 </div>
-                <div className="practice-accuracy-badge" style={{ background: accColor }}>
-                  {p.accuracy}%
+                <div className="practice-accuracy-badge" style={{ background: badgeColor }}>
+                  {badgeText}
                 </div>
               </div>
 
               <div className="practice-stats-row">
                 <div className="pstat">
                   <span className="pstat-label">Total</span>
-                  <span className="pstat-val">{p.totalQns}</span>
+                  <span className="pstat-val">{total}</span>
                 </div>
                 <div className="pstat green">
-                  <span className="pstat-label">✅ Correct</span>
-                  <span className="pstat-val">{p.correct}</span>
-                </div>
-                <div className="pstat red">
-                  <span className="pstat-label">❌ Wrong</span>
-                  <span className="pstat-val">{p.wrong}</span>
-                </div>
-                <div className="pstat purple">
-                  <span className="pstat-label">👆 Touched</span>
-                  <span className="pstat-val">{p.touched}</span>
+                  <span className="pstat-label">👆 Attempted</span>
+                  <span className="pstat-val">{attempted}</span>
                 </div>
                 <div className="pstat orange">
-                  <span className="pstat-label">⏭️ Skipped</span>
-                  <span className="pstat-val">{p.skipped}</span>
+                  <span className="pstat-label">⏭️ Remaining</span>
+                  <span className="pstat-val">{remaining}</span>
+                </div>
+                <div className="pstat purple">
+                  <span className="pstat-label">🔁 To Revise</span>
+                  <span className="pstat-val">{revisionQns.length}</span>
                 </div>
               </div>
 
-              {/* Progress bar */}
+              {/* Progress bar: attempted vs total */}
               <div className="practice-progress-bar">
                 <div
                   className="ppbar-correct"
-                  style={{ width: `${p.totalQns > 0 ? (p.correct / p.totalQns) * 100 : 0}%` }}
-                />
-                <div
-                  className="ppbar-wrong"
-                  style={{ width: `${p.totalQns > 0 ? (p.wrong / p.totalQns) * 100 : 0}%` }}
+                  style={{ width: `${pct}%` }}
                 />
               </div>
 
+              {/* Revision question numbers */}
+              {revisionQns.length > 0 && (
+                <div className="revision-chip-block">
+                  <div className="revision-chip-label">🔁 Revise these questions (tap ✕ once done):</div>
+                  <div className="revision-chip-list">
+                    {revisionQns.map(num => (
+                      <span className="revision-chip" key={num}>
+                        Q{num}
+                        <button
+                          type="button"
+                          className="revision-chip-clear"
+                          onClick={() => handleClearRevision(p, num)}
+                          title="Mark revised"
+                        >✕</button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="practice-card-actions">
-                <button className="btn-action reattempt" onClick={() => openReattempt(p)}>🔁 Reattempt</button>
                 <button className="btn-action edit" onClick={() => openEdit(p)}>✏️ Edit</button>
                 <button className="btn-action del" onClick={() => handleDelete(p.id)}>🗑️</button>
               </div>
